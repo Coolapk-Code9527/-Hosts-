@@ -7,9 +7,18 @@ MODDIR=${0%/*}
 
 # 该脚本将在late_start服务模式下执行
 sleep 20
-# IP转发,伪装
+# IP转发配置
 sysctl -w net.ipv4.ip_forward=1
 sysctl -w net.ipv4.ip_dynaddr=1
+sysctl -w net.ipv4.ip_nonlocal_bind=1
+sysctl -w net.ipv4.conf.lo.rp_filter=0
+sysctl -w net.ipv4.conf.all.rp_filter=0
+sysctl -w net.ipv4.conf.default.rp_filter=0
+sysctl -w net.ipv6.conf.all.forwarding=1
+sysctl -w net.ipv6.ip_nonlocal_bind=1
+sysctl -w net.ipv6.conf.lo.disable_ipv6=0
+sysctl -w net.ipv6.conf.all.disable_ipv6=0
+sysctl -w net.ipv6.conf.default.disable_ipv6=0
 # IP(添加多个IP用,隔开)
 IP=119.39.80.248,58.251.150.40,119.39.80.43,119.39.80.42,58.251.150.31,119.39.120.64,58.251.150.37,119.39.80.56,36.250.8.220
 # 屏蔽IP
@@ -24,6 +33,8 @@ IP=119.39.80.248,58.251.150.40,119.39.80.43,119.39.80.42,58.251.150.31,119.39.12
 # 禁止ICMP Ping
 #iptables -A INPUT -p 1 -j DROP
 #iptables -A OUTPUT -p 1 -j DROP
+# 丢弃conntrack无效数据包
+iptables -t mangle -A PREROUTING -m conntrack --ctstate INVALID -j DROP
 # 数据包检测匹配放行
 iptables -t mangle -A PREROUTING -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
 iptables -t mangle -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
@@ -35,17 +46,36 @@ iptables -t mangle -A OUTPUT -p 6 -m multiport --dport 53,5353 -j ACCEPT
 iptables -t mangle -A OUTPUT -p 17 -m multiport --dport 53,5353 -j ACCEPT
 iptables -t mangle -A FORWARD -p 6 -m multiport --dport 53,5353 -j ACCEPT
 iptables -t mangle -A FORWARD -p 17 -m multiport --dport 53,5353 -j ACCEPT
-# 端口匹配标记
-iptables -t mangle -A PREROUTING -p 17 -m multiport --dport 53,5353 -j TPROXY --on-port 53 --tproxy-mark 0x2537
+# 透明代理端口匹配标记
+iptables -t mangle -A PREROUTING -p 6 -m multiport --dport 53,5353 -j TPROXY --on-port 53 --on-ip 223.5.5.5 --tproxy-mark 0x2537
+iptables -t mangle -A PREROUTING -p 17 -m multiport --dport 53,5353 -j TPROXY --on-port 53 --on-ip 223.5.5.5 --tproxy-mark 0x2537
+ip6tables -t mangle -A PREROUTING -p 6 -m multiport --dport 53,5353 -j TPROXY --on-port 53 --on-ip 2400:3200::1 --tproxy-mark 0x2537
+ip6tables -t mangle -A PREROUTING -p 17 -m multiport --dport 53,5353 -j TPROXY --on-port 53 --on-ip 2400:3200::1 --tproxy-mark 0x2537
+iptables -t mangle -A INPUT -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
+ip6tables -t mangle -A INPUT -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
 iptables -t mangle -A INPUT -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
+ip6tables -t mangle -A INPUT -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
+iptables -t mangle -A OUTPUT -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
+ip6tables -t mangle -A OUTPUT -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
 iptables -t mangle -A OUTPUT -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
+ip6tables -t mangle -A OUTPUT -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
+iptables -t mangle -A FORWARD -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
+ip6tables -t mangle -A FORWARD -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
 iptables -t mangle -A FORWARD -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
+ip6tables -t mangle -A FORWARD -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
+iptables -t mangle -A POSTROUTING -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
+ip6tables -t mangle -A POSTROUTING -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
 iptables -t mangle -A POSTROUTING -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
+ip6tables -t mangle -A POSTROUTING -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
 # 建立路由策略
 ip route flush table 1
-ip route add local default dev lo table 1
-ip rule add fwmark 9527 table 1 prio 1 lookup 1
+ip -6 route flush table 1
+ip -f inet rule add fwmark 9527 prio 1 lookup 1
+ip -f inet route add local default dev lo table 1
+ip -f inet6 rule add fwmark 9527 prio 1 lookup 1
+ip -f inet6 route add local default dev lo table 1
 ip route flush cache
+ip -6 route flush cache
 # 端口匹配转换
 iptables -t nat -A PREROUTING -p 6 -m multiport --dport 53,5353 -j REDIRECT --to-ports 53
 iptables -t nat -A PREROUTING -p 17 -m multiport --dport 53,5353 -j REDIRECT --to-ports 53
@@ -83,16 +113,6 @@ iptables -A INPUT -p 6 -m tcp --tcp-flags FIN,SYN,RST,PSH,ACK,URG FIN,SYN,RST,PS
 iptables -A INPUT -m state --state INVALID -j DROP
 iptables -A OUTPUT -m state --state INVALID -j DROP
 iptables -A FORWARD -m state --state INVALID -j DROP
-
-
-
-
-
-
-
-
-
-
 
 
 
