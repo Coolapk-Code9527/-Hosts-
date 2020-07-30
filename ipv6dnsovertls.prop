@@ -1,0 +1,9 @@
+#如不想加载,请在行前加#号或者将其删除。
+阿里=dns.alidns.com
+#谷歌=dns.google
+#Quad9=dns.quad9.net
+Adguard=dns.adguard.com
+NextDNS=dns.nextdns.io
+Cloudflare=1dot1dot1dot1.cloudflare-dns.com
+#仅支持IPV6
+天地互联=dns.cfiec.net

@@ -7,113 +7,115 @@ MODDIR=${0%/*}
 
 # 该脚本将在late_start服务模式下执行
 sleep 20
-# IP转发配置
-sysctl -w net.ipv4.ip_forward=1
-sysctl -w net.ipv4.ip_dynaddr=1
-sysctl -w net.ipv4.ip_nonlocal_bind=1
-sysctl -w net.ipv4.conf.lo.rp_filter=0
-sysctl -w net.ipv4.conf.all.rp_filter=0
-sysctl -w net.ipv4.conf.default.rp_filter=0
-sysctl -w net.ipv6.conf.all.forwarding=1
-sysctl -w net.ipv6.ip_nonlocal_bind=1
-sysctl -w net.ipv6.conf.lo.disable_ipv6=0
-sysctl -w net.ipv6.conf.all.disable_ipv6=0
-sysctl -w net.ipv6.conf.default.disable_ipv6=0
-# IP(添加多个IP用,隔开)
-IP=119.39.80.248,58.251.150.40,119.39.80.43,119.39.80.42,58.251.150.31,119.39.120.64,58.251.150.37,119.39.80.56,36.250.8.220
-# 屏蔽IP
-#iptables -I INPUT -s $IP -j DROP
-# IP地址重定向
-#iptables -t nat -I OUTPUT -d $IP -j DNAT --to-destination 120.0.0.1
-# 域名匹配拦截
-#iptables -I OUTPUT -m string --string pgdt.gtimg.cn --algo bm --to 65535 -j DROP
-# 禁止本地回环连接
-#iptables -A INPUT -i lo -j DROP
-#iptables -A OUTPUT -o lo -j DROP
-# 禁止ICMP Ping
-#iptables -A INPUT -p 1 -j DROP
-#iptables -A OUTPUT -p 1 -j DROP
-# 丢弃conntrack无效数据包
-iptables -t mangle -A PREROUTING -m conntrack --ctstate INVALID -j DROP
-# 数据包检测匹配放行
-iptables -t mangle -A PREROUTING -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-iptables -t mangle -A OUTPUT -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-iptables -t mangle -A FORWARD -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
-# 端口匹配放行
-iptables -t mangle -A PREROUTING -p 6 -m multiport --dport 53,5353 -j ACCEPT
-iptables -t mangle -A PREROUTING -p 17 -m multiport --dport 53,5353 -j ACCEPT
-iptables -t mangle -A OUTPUT -p 6 -m multiport --dport 53,5353 -j ACCEPT
-iptables -t mangle -A OUTPUT -p 17 -m multiport --dport 53,5353 -j ACCEPT
-iptables -t mangle -A FORWARD -p 6 -m multiport --dport 53,5353 -j ACCEPT
-iptables -t mangle -A FORWARD -p 17 -m multiport --dport 53,5353 -j ACCEPT
-# 透明代理端口匹配标记
-iptables -t mangle -A PREROUTING -p 6 -m multiport --dport 53,5353 -j TPROXY --on-port 53 --on-ip 223.5.5.5 --tproxy-mark 0x2537
-iptables -t mangle -A PREROUTING -p 17 -m multiport --dport 53,5353 -j TPROXY --on-port 53 --on-ip 223.5.5.5 --tproxy-mark 0x2537
-ip6tables -t mangle -A PREROUTING -p 6 -m multiport --dport 53,5353 -j TPROXY --on-port 53 --on-ip 2400:3200::1 --tproxy-mark 0x2537
-ip6tables -t mangle -A PREROUTING -p 17 -m multiport --dport 53,5353 -j TPROXY --on-port 53 --on-ip 2400:3200::1 --tproxy-mark 0x2537
-iptables -t mangle -A INPUT -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
-ip6tables -t mangle -A INPUT -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
-iptables -t mangle -A INPUT -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
-ip6tables -t mangle -A INPUT -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
-iptables -t mangle -A OUTPUT -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
-ip6tables -t mangle -A OUTPUT -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
-iptables -t mangle -A OUTPUT -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
-ip6tables -t mangle -A OUTPUT -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
-iptables -t mangle -A FORWARD -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
-ip6tables -t mangle -A FORWARD -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
-iptables -t mangle -A FORWARD -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
-ip6tables -t mangle -A FORWARD -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
-iptables -t mangle -A POSTROUTING -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
-ip6tables -t mangle -A POSTROUTING -p 6 --sport 53 --dport 53 -j MARK --set-mark 9527
-iptables -t mangle -A POSTROUTING -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
-ip6tables -t mangle -A POSTROUTING -p 17 --sport 53 --dport 53 -j MARK --set-mark 9527
-# 建立路由策略
-ip route flush table 1
-ip -6 route flush table 1
-ip -f inet rule add fwmark 9527 prio 1 lookup 1
-ip -f inet route add local default dev lo table 1
-ip -f inet6 rule add fwmark 9527 prio 1 lookup 1
-ip -f inet6 route add local default dev lo table 1
-ip route flush cache
-ip -6 route flush cache
-# 端口匹配转换
-iptables -t nat -A PREROUTING -p 6 -m multiport --dport 53,5353 -j REDIRECT --to-ports 53
-iptables -t nat -A PREROUTING -p 17 -m multiport --dport 53,5353 -j REDIRECT --to-ports 53
-# DNS目标地址转换
-iptables -t nat -A PREROUTING ! -s 223.5.5.5 ! -d 223.5.5.5 -p 6 --dport 53 -j DNAT --to-destination 223.5.5.5:53
-iptables -t nat -A PREROUTING ! -s 223.5.5.5 ! -d 223.5.5.5 -p 17 --dport 53 -j DNAT --to-destination 223.5.5.5:53
-iptables -t nat -A OUTPUT ! -s 223.5.5.5 ! -d 223.5.5.5 -p 6 --dport 53 -j DNAT --to-destination 223.5.5.5:53
-iptables -t nat -A OUTPUT ! -s 223.5.5.5 ! -d 223.5.5.5 -p 17 --dport 53 -j DNAT --to-destination 223.5.5.5:53
-iptables -t nat -A POSTROUTING -j MASQUERADE
-iptables -t nat -A POSTROUTING ! -s 223.5.5.5 ! -d 223.5.5.5 -p 6 --sport 53 -j SNAT --to-source 223.5.5.5:53
-iptables -t nat -A POSTROUTING ! -s 223.5.5.5 ! -d 223.5.5.5 -p 17 --sport 53 -j SNAT --to-source 223.5.5.5:53
-# 丢弃碎片数据包
-iptables -A INPUT -f -j DROP
-# 丢弃TCP空值数据包
-iptables -A INPUT -p 6 --tcp-flags ALL NONE -j DROP
-# 丢弃TCP标记为SYN但不是新创建的数据包
-iptables -A INPUT -p 6 ! --syn -m state --state NEW -j DROP
-# 丢弃TCP标记为SYN/ACK但是新创建的数据包
-iptables -A INPUT -p 6 --tcp-flags SYN,ACK SYN,ACK -m state --state NEW -j DROP
-# 丢弃TCP标记组合异常的数据包
-iptables -A INPUT -p 6 --tcp-flags ALL ALL -j DROP
-iptables -A INPUT -p 6 --tcp-flags ALL FIN,PSH,URG -j DROP
-iptables -A INPUT -p 6 --tcp-flags ALL SYN,RST,ACK,FIN,URG -j DROP
-iptables -A INPUT -p 6 --tcp-flags ALL FIN,URG,PSH -j DROP
-iptables -A INPUT -p 6 -m tcp --tcp-flags FIN,ACK FIN -j DROP
-iptables -A INPUT -p 6 -m tcp --tcp-flags PSH,ACK PSH -j DROP
-iptables -A INPUT -p 6 -m tcp --tcp-flags ACK,URG URG -j DROP
-iptables -A INPUT -p 6 -m tcp --tcp-flags FIN,RST FIN,RST -j DROP
-iptables -A INPUT -p 6 -m tcp --tcp-flags FIN,SYN FIN,SYN -j DROP
-iptables -A INPUT -p 6 -m tcp --tcp-flags SYN,RST SYN,RST -j DROP
-iptables -A INPUT -p 6 -m tcp --tcp-flags FIN,SYN,RST,PSH,ACK,URG NONE -j DROP
-iptables -A INPUT -p 6 -m tcp --tcp-flags FIN,SYN,RST,PSH,ACK,URG FIN,PSH,URG -j DROP
-iptables -A INPUT -p 6 -m tcp --tcp-flags FIN,SYN,RST,PSH,ACK,URG FIN,SYN,RST,PSH,ACK,URG -j DROP
-# 丢弃无效数据包
-iptables -A INPUT -m state --state INVALID -j DROP
-iptables -A OUTPUT -m state --state INVALID -j DROP
-iptables -A FORWARD -m state --state INVALID -j DROP
+while true; do
 
+ipv4dns=`cat $MODDIR/ipv4dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
+ipv6dns=`cat $MODDIR/ipv6dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
+ipv4dnsovertls=`cat $MODDIR/ipv4dnsovertls.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
+ipv6dnsovertls=`cat $MODDIR/ipv6dnsovertls.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
+AndroidSDK=`getprop ro.build.version.sdk`
+dotmode=`settings get global private_dns_mode`
 
+if [[ -s $MODDIR/ipv4dns.prop ]];then
+for dns in $ipv4dns ;do
+    setsid ping -c 60 -w 6 -A -q $dns >> $MODDIR/ipv4dns.log
+    sleep 0.2
+done
+fi
+
+    ip6tables -t nat -nL >/dev/null 2>&1
+if [[ $? -eq 0 && -s $MODDIR/ipv6dns.prop ]];then
+for dnss in $ipv6dns; do
+    setsid ping6 -c 60 -A -w 6 -q $dnss >> $MODDIR/ipv6dns.log
+    sleep 0.2
+done
+fi
+
+if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODDIR/ipv4dnsovertls.prop ]];then
+for dot in $ipv4dnsovertls; do
+    setsid ping -c 60 -A -w 6 -q $dot >> $MODDIR/ipv4dnsovertls.log
+    sleep 0.2
+done
+fi
+
+if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODDIR/ipv6dnsovertls.prop ]];then
+for dots in $ipv6dnsovertls; do
+    setsid ping -c 60 -A -w 6 -q $dots >> $MODDIR/ipv6dnsovertls.log
+    sleep 0.2
+done
+fi
+
+avg=`cat $MODDIR/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
+ewma=`cat $MODDIR/ipv4dns.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+dnsavg=`cat $MODDIR/ipv4dns.log | grep -B 2 $avg | awk 'NR==1{print $2}' `
+dnsewma=`cat $MODDIR/ipv4dns.log | grep -B 2 $ewma | awk 'NR==1{print $2}' `
+
+if [[ $dnsavg != "" ]];then
+    iptables -t nat -F OUTPUT
+    iptables -t nat -F POSTROUTING
+    iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    iptables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsavg:53
+    iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsavg:53
+    iptables -t nat -A POSTROUTING -j MASQUERADE
+elif [[ $dnsewma != "" ]];then
+    iptables -t nat -F OUTPUT
+    iptables -t nat -F POSTROUTING
+    iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    iptables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
+    iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
+    iptables -t nat -A POSTROUTING -j MASQUERADE
+fi
+
+ipv6avg=`cat $MODDIR/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
+ipv6ewma=`cat $MODDIR/ipv6dns.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6dnsavg=`cat $MODDIR/ipv6dns.log | grep -B 2 $ipv6avg | awk 'NR==1{print $2}' `
+ipv6dnsewma=`cat $MODDIR/ipv6dns.log | grep -B 2 $ipv6ewma | awk 'NR==1{print $2}' `
+
+if [[ $ipv6dnsavg != "" ]];then
+    ip6tables -t nat -F OUTPUT
+    ip6tables -t nat -F POSTROUTING
+    ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    ip6tables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
+    ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
+    ip6tables -t nat -A POSTROUTING -j MASQUERADE
+elif [[ $ipv6dnsavg != "" ]];then
+    ip6tables -t nat -F OUTPUT
+    ip6tables -t nat -F POSTROUTING
+    ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    ip6tables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
+    ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
+    ip6tables -t nat -A POSTROUTING -j MASQUERADE
+fi
+
+dotavg=`cat $MODDIR/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
+dotewma=`cat $MODDIR/ipv4dnsovertls.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+dotdnsavg=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 $dotavg | awk 'NR==1{print $2}' `
+dotdnsewma=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 $dotewma | awk 'NR==1{print $2}' `
+ipv6dotavg=`cat $MODDIR/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
+ipv6dotewma=`cat $MODDIR/ipv6dnsovertls.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6dotdnsavg=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 $ipv6dotavg | awk 'NR==1{print $2}' `
+ipv6dotdnsewma=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 $ipv6dotewma | awk 'NR==1{print $2}' `
+
+if [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotdnsavg != "" ]];then
+
+    [[ `echo "$dotavg > $ipv6dotavg" | bc` -eq 1 ]] && settings put global private_dns_specifier $ipv6dotdnsavg || settings put global private_dns_specifier $dotdnsavg
+
+elif [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotdnsewma != "" ]];then
+
+    [[ `echo "$dotewma > $ipv6dotewma" | bc` -eq 1 ]] && settings put global private_dns_specifier $ipv6dotdnsewma || settings put global private_dns_specifier $dotdnsewma
+
+fi
+
+echo > $MODDIR/ipv4dns.log
+echo > $MODDIR/ipv6dns.log
+echo > $MODDIR/ipv4dnsovertls.log
+echo > $MODDIR/ipv6dnsovertls.log
+sleep 3m
+reset
+done
 
 
