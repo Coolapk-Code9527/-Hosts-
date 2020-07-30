@@ -59,11 +59,11 @@ NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com
 NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version' | cut -d 'V' -f 2`
 Version=`cat $MODPATH/module.prop | grep 'version' | cut -d 'V' -f 2`
 if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
-echo "- 检测到有新版本[️🆕v$NewVersionA],可关注作者获取更新❗"
-ui_print "$echoprint"
+  ui_print "- 检测到有新版本[️🆕v$NewVersionA],可关注作者获取更新❗"
+  ui_print "$echoprint"
 elif [[ $? -ne 0 && $NewVersionB != "" && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
-echo "- 检测到有新版本[️🆕v$NewVersionB],可关注作者获取更新❗"
-ui_print "$echoprint"
+  ui_print "- 检测到有新版本[🆕v$NewVersionB],可关注作者获取更新❗"
+  ui_print "$echoprint"
 fi
 
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
