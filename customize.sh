@@ -54,6 +54,12 @@ systemavailD=`df /system | awk 'NR==3{print $3}'`
   [[ -f $hostsTesting && -f $ModulesPath/hostsjj/system/etc/hosts ]] && ui_print "- 如已安装了同类其他hosts模块,请停用或卸载其他hosts模块,不然可能会有冲突导致此模块hosts无法生效❗"
   echoprint=' ------------------------------------------------------ '
   ui_print "$echoprint"
+  
+NewVersion=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | sed -n 1p | cut -d 'V' -f 2`
+Version=`cat $MODPATH/module.prop | grep 'version' | cut -d 'V' -f 2`
+[[ `echo "$NewVersion > $Version" | bc` -eq 1 ]] && echo "- 检测到有新版本,可关注作者获取更新❗"
+[ $? -eq 0 ] && ui_print "$echoprint"
+
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
   ui_print "$echoprint"
   ui_print "- 【hosts文件】"
