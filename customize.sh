@@ -55,13 +55,20 @@ systemavailD=`df /system | awk 'NR==3{print $3}'`
   echoprint=' ------------------------------------------------------ '
   ui_print "$echoprint"
   
-NewVersion=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | sed -n 1p | cut -d 'V' -f 2`
+NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version' | cut -d 'V' -f 2`
+NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version' | cut -d 'V' -f 2`
 Version=`cat $MODPATH/module.prop | grep 'version' | cut -d 'V' -f 2`
-[[ `echo "$NewVersion > $Version" | bc` -eq 1 ]] && echo "- 检测到有新版本,可关注作者获取更新❗"
-[ $? -eq 0 ] && ui_print "$echoprint"
+if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
+echo "- 检测到有新版本[️🆕v$NewVersionA],可关注作者获取更新❗"
+ui_print "$echoprint"
+elif [[ $? -ne 0 && $NewVersionB != "" && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
+echo "- 检测到有新版本[️🆕v$NewVersionB],可关注作者获取更新❗"
+ui_print "$echoprint"
+fi
 
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
   ui_print "$echoprint"
+  
   ui_print "- 【hosts文件】"
   ui_print "大小：$usage  行数：$count 行  修改日期：$modifytime"
   ui_print "$echoprint"
@@ -269,7 +276,11 @@ echo > $MODPATH/ipv4dnsovertls.log
 echo > $MODPATH/ipv6dnsovertls.log
 
   ui_print "$echoprint"
-[[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 对于ROOT设备,建议安装[BusyBox]模块以完整的支持更多命令!"
+  ProjectAddress=`cat $hosts | sed -n '4,6p' | awk '{print $2}'`
+  ui_print "- 【订阅地址-GitHub/Gitee】"
+  ui_print "$ProjectAddress"
+  ui_print "$echoprint"
+
 endtime=`date +"%Y-%m-%d %H:%M:%S"`
 start_seconds=`date -d "$starttime" +%s`
 end_seconds=`date -d "$endtime" +%s`
@@ -283,6 +294,7 @@ week=`date +'%w' | sed -e 's/0/星期日/g' -e 's/1/星期一/g' -e 's/2/星期�
 #  ui_print "- 循环延时：$sleeptime"
   [[ $(($interval_time%3600/60)) -ge "1" ]] && ui_print "- 安装耗时：$(($interval_time%3600/60))分$(($interval_time%3600%60))秒" || ui_print "- 安装耗时：$interval_time秒"
   ui_print "- 系统时间：$currenttime $week 今年第$firstweek周/$firstday天"
+  [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 对于ROOT设备,建议安装[BusyBox]模块以完整的支持更多命令‼️"
   ui_print "$echoprint"
   ui_print "- by $author"
   ui_print " "
