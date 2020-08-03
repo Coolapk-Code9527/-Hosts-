@@ -7,8 +7,19 @@ MODDIR=${0%/*}
 
 # 该脚本将在late_start服务模式下执行
 sleep 20
-while true; do
+description=$MODDIR/module.prop
+NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version' | cut -d 'V' -f 2`
+NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version' | cut -d 'V' -f 2`
+Version=`cat $MODDIR/module.prop | grep 'version' | cut -d 'V' -f 2`
+if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
+sed -i "s/！/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g" $description
+elif [[ $? -ne 0 && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
+sed -i "s/！/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g" $description
+elif [[ $? -ne 0 ]];then
+sed -i "s/！.*）/！/g" $description
+fi
 
+while true; do
 ipv4dns=`cat $MODDIR/ipv4dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
 ipv6dns=`cat $MODDIR/ipv6dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
 ipv4dnsovertls=`cat $MODDIR/ipv4dnsovertls.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`

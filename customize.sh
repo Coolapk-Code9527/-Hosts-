@@ -321,12 +321,16 @@ if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
   ui_print "- 检测到有新版本[️GitHub🆕v$NewVersionA],可关注作者获取更新❗"
   ui_print "$echoprint"
   sleep 5
+sed -i "s/！/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g" $description
 am start -a android.intent.action.VIEW -d 'https://github.com/Coolapk-Code9527/-Hosts-' >/dev/null 2>&1
 elif [[ $? -ne 0 && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
   ui_print "- 检测到有新版本[Gitee🆕v$NewVersionB],可关注作者获取更新❗"
   ui_print "$echoprint"
   sleep 5
+sed -i "s/！/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g" $description
 am start -a android.intent.action.VIEW -d 'https://gitee.com/coolapk-code_9527/border' >/dev/null 2>&1
+elif [[ $? -ne 0 ]];then
+sed -i "s/！.*）/！/g" $description
 fi
 
   ui_print "- by $author"
