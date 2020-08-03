@@ -54,18 +54,6 @@ systemavailD=`df /system | awk 'NR==3{print $3}'`
   [[ -f $hostsTesting && -f $ModulesPath/hostsjj/system/etc/hosts ]] && ui_print "- 如已安装了同类其他hosts模块,请停用或卸载其他hosts模块,不然可能会有冲突导致此模块hosts无法生效❗"
   echoprint=' ------------------------------------------------------ '
   ui_print "$echoprint"
-  
-NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version' | cut -d 'V' -f 2`
-NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version' | cut -d 'V' -f 2`
-Version=`cat $MODPATH/module.prop | grep 'version' | cut -d 'V' -f 2`
-if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
-  ui_print "- 检测到有新版本[️GitHub🆕v$NewVersionA],可关注作者获取更新❗"
-  ui_print "$echoprint"
-elif [[ $? -ne 0 && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
-  ui_print "- 检测到有新版本[Gitee🆕v$NewVersionB],可关注作者获取更新❗"
-  ui_print "$echoprint"
-fi
-
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
   ui_print "$echoprint"
   
@@ -141,8 +129,8 @@ ipv4dnsovertls=`cat $MODPATH/ipv4dnsovertls.prop | awk '!/#/ {print $NF}' | cut 
 ipv6dnsovertls=`cat $MODPATH/ipv6dnsovertls.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
 AndroidSDK=`getprop ro.build.version.sdk`
 dotmode=`settings get global private_dns_mode`
-iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep DNAT | awk '{print $(NF)}' | cut -d ':' -f 2-`
-ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep DNAT | awk '{print $(NF)}' | cut -d ':' -f 2-`
+iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
+ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
 #[ $iptdnsTesting != "" ] && ui_print "- 检测到本机已设置DNS目标地址转换,如除本模块外还安装了同类模块请先停用,不然可能会起冲突!"
 
 [[ $iptdnsTesting != "" ]] && iptables -t nat -F OUTPUT >/dev/null 2>&1
@@ -270,13 +258,42 @@ elif [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotmode = "hostname" ]];then
     ui_print "如网络出问题请[关闭].(无法连接网络、无法加载图片、连接VPN没网等❗)"
 fi
 
+description=$MODPATH/module.prop
+dotmode=`settings get global private_dns_mode`
+dotspecifier=`settings get global private_dns_specifier`
+iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
+ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+ipv4Testingname=`cat $MODPATH/ipv4dns.prop | grep $iptdnsTesting | cut -d "=" -f 1`
+ipv6Testingname=`cat $MODPATH/ipv6dns.prop | grep $ipt6dnsTesting | cut -d "=" -f 1`
+dotTestingname=`cat $MODPATH/ipv4dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
+ipv6dotTestingname=`cat $MODPATH/ipv6dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
+refreshtime=`date +'%Y-%m-%d %H:%M:%S'`
+
+if [[ $ipv4Testingname != "" && $ipv6Testingname != "" && $ipv6dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" && $dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $ipv6dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+else
+sed -i "s/- .*/- /g" $description
+fi
+
 echo > $MODPATH/ipv4dns.log
 echo > $MODPATH/ipv6dns.log
 echo > $MODPATH/ipv4dnsovertls.log
 echo > $MODPATH/ipv6dnsovertls.log
 
   ui_print "$echoprint"
-  ProjectAddress=`cat $hosts | sed -n '4,6p' | awk '{print $2}'`
+  ProjectAddress=`cat $hosts | grep 'https://' | awk '{print $2}'`
   ui_print "- 【订阅地址-GitHub/Gitee】"
   ui_print "$ProjectAddress"
   ui_print "$echoprint"
@@ -296,6 +313,22 @@ week=`date +'%w' | sed -e 's/0/星期日/g' -e 's/1/星期一/g' -e 's/2/星期�
   ui_print "- 系统时间：$currenttime $week 今年第$firstweek周/$firstday天"
   [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 对于ROOT设备,建议安装[BusyBox]模块以完整的支持更多命令‼️"
   ui_print "$echoprint"
+
+NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version' | cut -d 'V' -f 2`
+NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version' | cut -d 'V' -f 2`
+Version=`cat $MODPATH/module.prop | grep 'version' | cut -d 'V' -f 2`
+if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
+  ui_print "- 检测到有新版本[️GitHub🆕v$NewVersionA],可关注作者获取更新❗"
+  ui_print "$echoprint"
+  sleep 5
+am start -a android.intent.action.VIEW -d 'https://github.com/Coolapk-Code9527/-Hosts-' >/dev/null 2>&1
+elif [[ $? -ne 0 && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
+  ui_print "- 检测到有新版本[Gitee🆕v$NewVersionB],可关注作者获取更新❗"
+  ui_print "$echoprint"
+  sleep 5
+am start -a android.intent.action.VIEW -d 'https://gitee.com/coolapk-code_9527/border' >/dev/null 2>&1
+fi
+
   ui_print "- by $author"
   ui_print " "
   ui_print " "

@@ -110,6 +110,35 @@ elif [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotdnsewma != "" ]];then
 
 fi
 
+description=$MODDIR/module.prop
+dotmode=`settings get global private_dns_mode`
+dotspecifier=`settings get global private_dns_specifier`
+iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
+ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+ipv4Testingname=`cat $MODDIR/ipv4dns.prop | grep $iptdnsTesting | cut -d "=" -f 1`
+ipv6Testingname=`cat $MODDIR/ipv6dns.prop | grep $ipt6dnsTesting | cut -d "=" -f 1`
+dotTestingname=`cat $MODDIR/ipv4dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
+ipv6dotTestingname=`cat $MODDIR/ipv6dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
+refreshtime=`date +'%Y-%m-%d %H:%M:%S'`
+
+if [[ $ipv4Testingname != "" && $ipv6Testingname != "" && $ipv6dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" && $dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $ipv6dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv4Testingname != "" ]];then
+sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+else
+sed -i "s/- .*/- /g" $description
+fi
+
 echo > $MODDIR/ipv4dns.log
 echo > $MODDIR/ipv6dns.log
 echo > $MODDIR/ipv4dnsovertls.log
