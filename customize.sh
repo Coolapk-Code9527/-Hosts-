@@ -182,6 +182,8 @@ elif [[ $dnsewma != "" ]];then
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
     ui_print "IPV4_DNS：[$ewmaname] $dnsewma "
+else
+    iptables -t nat -F OUTPUT
 fi
 
 ipv6avg=`cat $MODPATH/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
@@ -201,6 +203,8 @@ elif [[ $ipv6dnsavg != "" ]];then
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
     ui_print "IPV6_DNS：[$ipv6ewmaname] $ipv6dnsewma "
+else
+    ip6tables -t nat -F OUTPUT
 fi
 
 dotavg=`cat $MODPATH/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
@@ -279,10 +283,14 @@ elif [[ $ipv4Testingname != "" && $dotTestingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
-sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv4Testingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv6Testingname != "" ]];then
+sed -i "s/- .*/- IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv6dotTestingname != "" ]];then
+sed -i "s/- .*/- 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $dotTestingname != "" ]];then
+sed -i "s/- .*/- 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 else
 sed -i "s/- .*/- /g" $description
 fi
@@ -316,18 +324,20 @@ week=`date +'%w' | sed -e 's/0/星期日/g' -e 's/1/星期一/g' -e 's/2/星期�
 
 NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version' | cut -d 'V' -f 2`
 NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version' | cut -d 'V' -f 2`
-Version=`cat $MODPATH/module.prop | grep 'version' | cut -d 'V' -f 2`
+Version=`cat $MODPATH/module.prop | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
+coolapkTesting=`pm list package | grep -w 'com.coolapk.market'`
+
 if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
   ui_print "- 检测到有新版本[️GitHub🆕v$NewVersionA],可关注作者获取更新❗"
   ui_print "$echoprint"
   sleep 5
-sed -i "s/！/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g" $description
+sed -i "s/！/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g;s/！.*）/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g" $description
 am start -a android.intent.action.VIEW -d 'https://github.com/Coolapk-Code9527/-Hosts-' >/dev/null 2>&1
 elif [[ $? -ne 0 && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
   ui_print "- 检测到有新版本[Gitee🆕v$NewVersionB],可关注作者获取更新❗"
   ui_print "$echoprint"
   sleep 5
-sed -i "s/！/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g" $description
+sed -i "s/！/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g;s/！.*）/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g" $description
 am start -a android.intent.action.VIEW -d 'https://gitee.com/coolapk-code_9527/border' >/dev/null 2>&1
 elif [[ $? -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
@@ -338,6 +348,8 @@ fi
   ui_print " "
   ui_print " "
 
+#  sleep 5
+#am start -d coolmarket://u/1539433 >/dev/null 2>&1
 ##########################################################################################
 #
 # 安装框架将导出一些变量和函数。

@@ -6,15 +6,15 @@
 MODDIR=${0%/*}
 
 # 该脚本将在late_start服务模式下执行
-sleep 20
+sleep 25
 description=$MODDIR/module.prop
 NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version' | cut -d 'V' -f 2`
 NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version' | cut -d 'V' -f 2`
-Version=`cat $MODDIR/module.prop | grep 'version' | cut -d 'V' -f 2`
+Version=`cat $MODDIR/module.prop | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
 if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
-sed -i "s/！/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g" $description
+sed -i "s/！/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g;s/！.*）/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g" $description
 elif [[ $? -ne 0 && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
-sed -i "s/！/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g" $description
+sed -i "s/！/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g;s/！.*）/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g" $description
 elif [[ $? -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
 fi
@@ -77,6 +77,9 @@ elif [[ $dnsewma != "" ]];then
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
     iptables -t nat -A POSTROUTING -j MASQUERADE
+else
+    iptables -t nat -F OUTPUT
+    iptables -t nat -F POSTROUTING
 fi
 
 ipv6avg=`cat $MODDIR/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
@@ -100,6 +103,9 @@ elif [[ $ipv6dnsavg != "" ]];then
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
     ip6tables -t nat -A POSTROUTING -j MASQUERADE
+else
+    ip6tables -t nat -F OUTPUT
+    ip6tables -t nat -F POSTROUTING
 fi
 
 dotavg=`cat $MODDIR/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
@@ -142,10 +148,14 @@ elif [[ $ipv4Testingname != "" && $dotTestingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
-sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv4Testingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv6Testingname != "" ]];then
+sed -i "s/- .*/- IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv6dotTestingname != "" ]];then
+sed -i "s/- .*/- 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $dotTestingname != "" ]];then
+sed -i "s/- .*/- 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 else
 sed -i "s/- .*/- /g" $description
 fi
