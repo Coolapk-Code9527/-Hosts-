@@ -46,7 +46,7 @@ systemusedB=`df -h /system | awk 'NR==3{print $2}'`
 systemavailB=`df -h /system | awk 'NR==3{print $3}'`
 systemuseB=`df -h /system | awk 'NR==3{print $4}'`
 systemavailD=`df /system | awk 'NR==3{print $3}'`
-#usagetets=`echo $usage | sed 's/.$//g'`
+
   [[ -d $ModulesPath/dnss && ! -f $ModulesPath/dnss/disable ]] && ui_print "- 本模块已支持DNS更改,无需再使用其他DNS模块❗"
   busybox --help >/dev/null 2>&1
   [ $? -ne 0 ] && ui_print "- 未检测到[BusyBox]模块,许多Linux命令将不能被执行,可能会发生错误‼️"
@@ -164,6 +164,7 @@ for dots in $ipv6dnsovertls; do
     sleep 0.2
 done
 fi
+sync
 
 avg=`cat $MODPATH/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
 ewma=`cat $MODPATH/ipv4dns.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
@@ -322,8 +323,8 @@ week=`date +'%w' | sed -e 's/0/星期日/g' -e 's/1/星期一/g' -e 's/2/星期�
   [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 对于ROOT设备,建议安装[BusyBox]模块以完整的支持更多命令‼️"
   ui_print "$echoprint"
 
-NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version' | cut -d 'V' -f 2`
-NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version' | cut -d 'V' -f 2`
+NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
+NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
 Version=`cat $MODPATH/module.prop | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
 coolapkTesting=`pm list package | grep -w 'com.coolapk.market'`
 
@@ -342,7 +343,6 @@ am start -a android.intent.action.VIEW -d 'https://gitee.com/coolapk-code_9527/b
 elif [[ $? -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
 fi
-
   ui_print "- by $author"
   ui_print " "
   ui_print " "

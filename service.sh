@@ -8,8 +8,8 @@ MODDIR=${0%/*}
 # 该脚本将在late_start服务模式下执行
 sleep 25
 description=$MODDIR/module.prop
-NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version' | cut -d 'V' -f 2`
-NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version' | cut -d 'V' -f 2`
+NewVersionA=`curl --connect-timeout 10 -m 10 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
+NewVersionB=`curl --connect-timeout 10 -m 10 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
 Version=`cat $MODDIR/module.prop | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
 hosts=$MODDIR/system/etc/hosts
 syshosts=/system/etc/hosts
