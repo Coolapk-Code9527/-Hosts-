@@ -72,7 +72,7 @@ findcacheA=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheB=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheAB=`echo | awk "{print ($findcacheA+$findcacheB)/1024}"`
 
-if `find --help >/dev/null 2>&1` && `xargs --help >/dev/null 2>&1` ;then
+if `find --help >/dev/null 2>&1` || `xargs --help >/dev/null 2>&1` ;then
 find $clearA $clearB | xargs rm -rf {} \ >/dev/null 2>&1
 rm -rf /data/media/0/miad/* >/dev/null 2>&1
 chmod 000 /data/media/0/miad >/dev/null 2>&1
