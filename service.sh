@@ -8,9 +8,11 @@ MODDIR=${0%/*}
 # 该脚本将在late_start服务模式下执行
 sleep 25
 description=$MODDIR/module.prop
-NewVersionA=`curl --connect-timeout 10 -m 10 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
-NewVersionB=`curl --connect-timeout 10 -m 10 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
-Version=`cat $MODDIR/module.prop | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
+NewVersionA=`curl --connect-timeout 10 -m 10 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version=' | cut -d '=' -f 2`
+NewVersionC=`echo $NewVersionA | sed 's/[^0-9]//g'`
+NewVersionB=`curl --connect-timeout 10 -m 10 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version=' | cut -d '=' -f 2`
+NewVersionD=`echo $NewVersionB | sed 's/[^0-9]//g'`
+Version=`cat $MODDIR/module.prop | grep 'version=' | sed 's/[^0-9]//g'`
 hosts=$MODDIR/system/etc/hosts
 syshosts=/system/etc/hosts
 usage=`du $hosts | awk '{print $1}'`
@@ -22,10 +24,10 @@ elif [[ $? -ne 0 ]];then
 sed -i "s/description\=.*』/description\=/g" $description
 fi
 
-if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
-sed -i "s/！/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g;s/！.*）/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g" $description
-elif [[ $? -ne 0 && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
-sed -i "s/！/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g;s/！.*）/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g" $description
+if [[ $NewVersionC != "" && $NewVersionC -gt $Version ]];then
+sed -i "s/！/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g;s/！.*）/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g" $description
+elif [[ $NewVersionD != "" && $NewVersionD -gt $Version ]];then
+sed -i "s/！/！（检测到有新版本\[️Gitee🆕"$NewVersionB"\]❗）/g;s/！.*）/！（检测到有新版本\[️Gitee🆕"$NewVersionB"\]❗）/g" $description
 elif [[ $? -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
 fi
@@ -39,8 +41,8 @@ AndroidSDK=`getprop ro.build.version.sdk`
 dotmode=`settings get global private_dns_mode`
 
 if [[ -s $MODDIR/ipv4dns.prop ]];then
-for dns in $ipv4dns ;do
-    setsid ping -c 60 -w 6 -A -q $dns >> $MODDIR/ipv4dns.log
+for dns in $ipv4dns; do
+    setsid ping -c 100 -w 10 -A -q $dns >> $MODDIR/ipv4dns.log
     sleep 0.2
 done
 fi
@@ -48,29 +50,29 @@ fi
     ip6tables -t nat -nL >/dev/null 2>&1
 if [[ $? -eq 0 && -s $MODDIR/ipv6dns.prop ]];then
 for dnss in $ipv6dns; do
-    setsid ping6 -c 60 -A -w 6 -q $dnss >> $MODDIR/ipv6dns.log
+    setsid ping6 -c 100 -A -w 10 -q $dnss >> $MODDIR/ipv6dns.log
     sleep 0.2
 done
 fi
 
 if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODDIR/ipv4dnsovertls.prop ]];then
 for dot in $ipv4dnsovertls; do
-    setsid ping -c 60 -A -w 6 -q $dot >> $MODDIR/ipv4dnsovertls.log
+    setsid ping -c 100 -A -w 10 -q $dot >> $MODDIR/ipv4dnsovertls.log
     sleep 0.2
 done
 fi
 
 if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODDIR/ipv6dnsovertls.prop ]];then
 for dots in $ipv6dnsovertls; do
-    setsid ping -c 60 -A -w 6 -q $dots >> $MODDIR/ipv6dnsovertls.log
+    setsid ping -c 100 -A -w 10 -q $dots >> $MODDIR/ipv6dnsovertls.log
     sleep 0.2
 done
 fi
 
-avg=`cat $MODDIR/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
-ewma=`cat $MODDIR/ipv4dns.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dnsavg=`cat $MODDIR/ipv4dns.log | grep -B 2 $avg | awk 'NR==1{print $2}' `
-dnsewma=`cat $MODDIR/ipv4dns.log | grep -B 2 $ewma | awk 'NR==1{print $2}' `
+avg=`cat $MODDIR/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ewma=`cat $MODDIR/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+dnsavg=`cat $MODDIR/ipv4dns.log | grep -B 2 "$avg" | awk 'NR==1{print $2}' `
+dnsewma=`cat $MODDIR/ipv4dns.log | grep -B 2 "$ewma" | awk 'NR==1{print $2}' `
 
 if [[ $dnsavg != "" ]];then
     iptables -t nat -F OUTPUT
@@ -93,10 +95,10 @@ else
     iptables -t nat -F POSTROUTING
 fi
 
-ipv6avg=`cat $MODDIR/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
-ipv6ewma=`cat $MODDIR/ipv6dns.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dnsavg=`cat $MODDIR/ipv6dns.log | grep -B 2 $ipv6avg | awk 'NR==1{print $2}' `
-ipv6dnsewma=`cat $MODDIR/ipv6dns.log | grep -B 2 $ipv6ewma | awk 'NR==1{print $2}' `
+ipv6avg=`cat $MODDIR/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6ewma=`cat $MODDIR/ipv6dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6dnsavg=`cat $MODDIR/ipv6dns.log | grep -B 2 "$ipv6avg" | awk 'NR==1{print $2}' `
+ipv6dnsewma=`cat $MODDIR/ipv6dns.log | grep -B 2 "$ipv6ewma" | awk 'NR==1{print $2}' `
 
 if [[ $ipv6dnsavg != "" ]];then
     ip6tables -t nat -F OUTPUT
@@ -119,23 +121,27 @@ else
     ip6tables -t nat -F POSTROUTING
 fi
 
-dotavg=`cat $MODDIR/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
-dotewma=`cat $MODDIR/ipv4dnsovertls.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dotdnsavg=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 $dotavg | awk 'NR==1{print $2}' `
-dotdnsewma=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 $dotewma | awk 'NR==1{print $2}' `
-ipv6dotavg=`cat $MODDIR/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
-ipv6dotewma=`cat $MODDIR/ipv6dnsovertls.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dotdnsavg=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 $ipv6dotavg | awk 'NR==1{print $2}' `
-ipv6dotdnsewma=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 $ipv6dotewma | awk 'NR==1{print $2}' `
+dotavg=`cat $MODDIR/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+dotavgbj=`echo $dotavg | awk '{printf("%.f\n",$1)}' `
+dotewma=`cat $MODDIR/ipv4dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+dotewmabj=`echo $dotewma | awk '{printf("%.f\n",$1)}' `
+dotdnsavg=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 "$dotavg" | awk 'NR==1{print $2}' `
+dotdnsewma=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 "$dotewma" | awk 'NR==1{print $2}' `
+ipv6dotavg=`cat $MODDIR/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6dotavgbj=`echo $ipv6dotavg | awk '{printf("%.f\n",$1)}' `
+ipv6dotewma=`cat $MODDIR/ipv6dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6dotewmabj=`echo $ipv6dotewma | awk '{printf("%.f\n",$1)}' `
+ipv6dotdnsavg=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 "$ipv6dotavg" | awk 'NR==1{print $2}' `
+ipv6dotdnsewma=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 "$ipv6dotewma" | awk 'NR==1{print $2}' `
 
-if [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotdnsavg != "" ]];then
-
-    [[ `echo "$dotavg > $ipv6dotavg" | bc` -eq 1 ]] && settings put global private_dns_specifier $ipv6dotdnsavg || settings put global private_dns_specifier $dotdnsavg
-
-elif [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotdnsewma != "" ]];then
-
-    [[ `echo "$dotewma > $ipv6dotewma" | bc` -eq 1 ]] && settings put global private_dns_specifier $ipv6dotdnsewma || settings put global private_dns_specifier $dotdnsewma
-
+if [[ $ipv6dotdnsavg != "" && $dotavgbj -gt $ipv6dotavgbj ]];then
+    settings put global private_dns_specifier $ipv6dotdnsavg
+elif [[ $dotdnsavg != "" ]];then
+    settings put global private_dns_specifier $dotdnsavg
+elif [[ $ipv6dotdnsewma != "" && $dotewmabj -gt $ipv6dotewmabj ]];then
+    settings put global private_dns_specifier $ipv6dotdnsewma
+elif [[ $dotdnsewma != "" ]];then
+    settings put global private_dns_specifier $dotdnsewm
 fi
 
 description=$MODDIR/module.prop
@@ -143,11 +149,11 @@ dotmode=`settings get global private_dns_mode`
 dotspecifier=`settings get global private_dns_specifier`
 iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
 ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
-ipv4Testingname=`cat $MODDIR/ipv4dns.prop | grep $iptdnsTesting | cut -d "=" -f 1`
-ipv6Testingname=`cat $MODDIR/ipv6dns.prop | grep $ipt6dnsTesting | cut -d "=" -f 1`
-dotTestingname=`cat $MODDIR/ipv4dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
-ipv6dotTestingname=`cat $MODDIR/ipv6dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
-refreshtime=`date +'%Y-%m-%d %H:%M:%S'`
+ipv4Testingname=`cat $MODDIR/ipv4dns.prop | grep "$iptdnsTesting" | cut -d "=" -f 1`
+ipv6Testingname=`cat $MODDIR/ipv6dns.prop | grep "$ipt6dnsTesting" | cut -d "=" -f 1`
+dotTestingname=`cat $MODDIR/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+ipv6dotTestingname=`cat $MODDIR/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+refreshtime=`date +"%Y-%m-%d %H:%M:%S"`
 
 if [[ $ipv4Testingname != "" && $ipv6Testingname != "" && $ipv6dotTestingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description

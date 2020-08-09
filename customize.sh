@@ -36,20 +36,13 @@ count=`wc -l $hosts | awk '{print $1}'`
 usage=`du -h $hosts | awk '{print $1}'`
 usageAB=`du $hosts | awk '{print $1}'`
 modifytime=`unzip -v $ZIPFILE | grep 'system/etc/hosts' | awk 'NR==1{print $5}' | sed -r 's/(.*)-(.*)-(.*)$/\3-\1-\2/'`
-systemsize=`df -h /system | awk 'NR==2{print $2}'`
-systemused=`df -h /system | awk 'NR==2{print $3}'`
-systemavail=`df -h /system | awk 'NR==2{print $4}'`
-systemuse=`df -h /system | awk 'NR==2{print $5}'`
 systemavailC=`df /system | awk 'NR==2{print $4}'`
-systemsizeB=`df -h /system | awk 'NR==3{print $1}'`
-systemusedB=`df -h /system | awk 'NR==3{print $2}'`
-systemavailB=`df -h /system | awk 'NR==3{print $3}'`
-systemuseB=`df -h /system | awk 'NR==3{print $4}'`
 systemavailD=`df /system | awk 'NR==3{print $3}'`
+system_examineA=`df -h /system | awk 'NR==2{print "大小："$2"  已用："$3"  剩余："$4"  占用率："$5""}'`
+system_examineB=`df -h /system | awk 'NR==3{print "大小："$1"  已用："$2"  剩余："$3"  占用率："$4""}'`
 
   [[ -d $ModulesPath/dnss && ! -f $ModulesPath/dnss/disable ]] && ui_print "- 本模块已支持DNS更改,无需再使用其他DNS模块❗"
-  busybox --help >/dev/null 2>&1
-  [ $? -ne 0 ] && ui_print "- 未检测到[BusyBox]模块,许多Linux命令将不能被执行,可能会发生错误‼️"
+  [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 未检测到[busybox]模块,许多Linux命令将不能被执行,可能会发生错误‼️"
   hostsTesting=`find $ModulesPath -name "hosts" | grep -v 'hostsjj' | awk 'NR==1'`
   [[ -f $hostsTesting && -f $ModulesPath/hostsjj/system/etc/hosts ]] && ui_print "- 如已安装了同类其他hosts模块,请停用或卸载其他hosts模块,不然可能会有冲突导致此模块hosts无法生效❗"
   echoprint=' ------------------------------------------------------ '
@@ -60,37 +53,37 @@ systemavailD=`df /system | awk 'NR==3{print $3}'`
   ui_print "- 【hosts文件】"
   ui_print "大小：$usage  行数：$count 行  修改日期：$modifytime"
   ui_print "$echoprint"
-if [[ $systemsize != "" || $systemused != "" || $systemavail != "" || $systemuse != "" ]];then
+if [[ "$system_examineB" = "" ]];then
   ui_print "- 【system分区】"
-  ui_print "大小：$systemsize  已用：$systemused  剩余：$systemavail  占用率：$systemuse"
-  [[ "$systemavailC" > "$usageAB" ]] || ui_print "- 【system分区】剩余空间小于模块【hosts文件】大小,可能会发生错误‼️"
+  ui_print "$system_examineA"
+  [[ "$systemavailC > $usageAB" ]] || ui_print "- 【system分区】剩余空间小于模块【hosts文件】大小,可能会发生错误‼️"
   ui_print "$echoprint"
-elif [[ $systemsizeB != "" || $systemusedB != "" || $systemavailB != "" || $systemuseB != "" ]];then
+elif [[ $? -ne 0 ]];then
   ui_print "- 【system分区】"
-  ui_print "大小：$systemsizeB  已用：$systemusedB  剩余：$systemavailB  占用率：$systemuseB"
-  [[ "$systemavailD" > "$usageAB" ]] || ui_print "- 【system分区】剩余空间小于模块【hosts文件】大小,可能会发生错误‼️"
+  ui_print "$system_examineB"
+  [[ "$systemavailD > $usageAB" ]] || ui_print "- 【system分区】剩余空间小于模块【hosts文件】大小,可能会发生错误‼️"
   ui_print "$echoprint"
 fi
 
   ui_print "- 【清除应用Cache】"
 clearA=/data/data/*/cache/*
 clearB=/data/media/0/Android/data/*/cache/*
-findcacheA=`du -csk $clearA | awk 'END{print $(NF-1)}' | cut -d 'M' -f 1`
-findcacheB=`du -csk $clearB | awk 'END{print $(NF-1)}' | cut -d 'M' -f 1`
+findcacheA=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
+findcacheB=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheAB=`echo | awk "{print ($findcacheA+$findcacheB)/1024}"`
-find --help >/dev/null 2>&1
-if [ $? -eq 0 ];then
+
+if `find --help >/dev/null 2>&1` && `xargs --help >/dev/null 2>&1` ;then
 find $clearA $clearB | xargs rm -rf {} \ >/dev/null 2>&1
 rm -rf /data/media/0/miad/* >/dev/null 2>&1
 chmod 000 /data/media/0/miad >/dev/null 2>&1
-findcacheB=`du -csk $clearA | awk 'END{print $(NF-1)}' | cut -d 'M' -f 1`
-findcacheC=`du -csk $clearB | awk 'END{print $(NF-1)}' | cut -d 'M' -f 1`
+findcacheB=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
+findcacheC=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheBC=`echo | awk "{print ($findcacheB+$findcacheC)/1024}"`
 findcacheDC=`echo | awk "{print $findcacheAB-$findcacheBC}" | awk '{printf("%.f\n",$1)}'`
-  ui_print "清除：$findcacheDC M"
+  ui_print "清除：${findcacheDC} M"
   ui_print "$echoprint"
 else
-  ui_print "清理失败,缺少[find]工具支持,请安装[BusyBox]模块!"
+  ui_print "清理失败,缺少[find/xargs]工具支持,请安装[BusyBox]模块!"
   ui_print "$echoprint"
 fi
 
@@ -135,9 +128,9 @@ ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | aw
 
 [[ $iptdnsTesting != "" ]] && iptables -t nat -F OUTPUT >/dev/null 2>&1
 [[ $ipt6dnsTesting != "" ]] && ip6tables -t nat -F OUTPUT >/dev/null 2>&1
-
+sync
 if [[ -s $MODPATH/ipv4dns.prop ]];then
-for dns in $ipv4dns ;do
+for dns in $ipv4dns; do
     setsid ping -c 5 -A -w 1 $dns >> $MODPATH/ipv4dns.log
     sleep 0.2
 done
@@ -164,14 +157,13 @@ for dots in $ipv6dnsovertls; do
     sleep 0.2
 done
 fi
-sync
 
-avg=`cat $MODPATH/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
-ewma=`cat $MODPATH/ipv4dns.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dnsavg=`cat $MODPATH/ipv4dns.log | grep -B 2 $avg | awk 'NR==1{print $2}' `
-dnsewma=`cat $MODPATH/ipv4dns.log | grep -B 2 $ewma | awk 'NR==1{print $2}' `
-avgname=`cat $MODPATH/ipv4dns.prop | grep $dnsavg | cut -d "=" -f 1`
-ewmaname=`cat $MODPATH/ipv4dns.prop | grep $dnsewma | cut -d "=" -f 1`
+avg=`cat $MODPATH/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ewma=`cat $MODPATH/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+dnsavg=`cat $MODPATH/ipv4dns.log | grep -B 2 "$avg" | awk 'NR==1{print $2}' `
+dnsewma=`cat $MODPATH/ipv4dns.log | grep -B 2 "$ewma" | awk 'NR==1{print $2}' `
+avgname=`cat $MODPATH/ipv4dns.prop | grep "$dnsavg" | cut -d "=" -f 1`
+ewmaname=`cat $MODPATH/ipv4dns.prop | grep "$dnsewma" | cut -d "=" -f 1`
 
 if [[ $dnsavg != "" ]];then
     iptables -t nat -F OUTPUT
@@ -187,12 +179,12 @@ else
     iptables -t nat -F OUTPUT
 fi
 
-ipv6avg=`cat $MODPATH/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
-ipv6ewma=`cat $MODPATH/ipv6dns.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dnsavg=`cat $MODPATH/ipv6dns.log | grep -B 2 $ipv6avg | awk 'NR==1{print $2}' `
-ipv6dnsewma=`cat $MODPATH/ipv6dns.log | grep -B 2 $ipv6ewma | awk 'NR==1{print $2}' `
-ipv6avgname=`cat $MODPATH/ipv6dns.prop | grep $ipv6dnsavg | cut -d "=" -f 1`
-ipv6ewmaname=`cat $MODPATH/ipv6dns.prop | grep $ipv6dnsewma | cut -d "=" -f 1`
+ipv6avg=`cat $MODPATH/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6ewma=`cat $MODPATH/ipv6dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6dnsavg=`cat $MODPATH/ipv6dns.log | grep -B 2 "$ipv6avg" | awk 'NR==1{print $2}' `
+ipv6dnsewma=`cat $MODPATH/ipv6dns.log | grep -B 2 "$ipv6ewma" | awk 'NR==1{print $2}' `
+ipv6avgname=`cat $MODPATH/ipv6dns.prop | grep "$ipv6dnsavg" | cut -d "=" -f 1`
+ipv6ewmaname=`cat $MODPATH/ipv6dns.prop | grep "$ipv6dnsewma" | cut -d "=" -f 1`
 
 if [[ $ipv6dnsavg != "" ]];then
     ip6tables -t nat -F OUTPUT
@@ -208,33 +200,54 @@ else
     ip6tables -t nat -F OUTPUT
 fi
 
-dotavg=`cat $MODPATH/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
-dotewma=`cat $MODPATH/ipv4dnsovertls.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dotdnsavg=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 $dotavg | awk 'NR==1{print $2}' `
-dotdnsewma=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 $dotewma | awk 'NR==1{print $2}' `
-ipv6dotavg=`cat $MODPATH/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | cut -d "/" -f 2 | awk '{print $1}' | sort -n | awk 'NR==1{print $1}' `
-ipv6dotewma=`cat $MODPATH/ipv6dnsovertls.log | grep -w 'ipg/ewma' | awk '{print $(NF-1)}' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dotdnsavg=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 $ipv6dotavg | awk 'NR==1{print $2}' `
-ipv6dotdnsewma=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 $ipv6dotewma | awk 'NR==1{print $2}' `
+dotavg=`cat $MODPATH/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+dotavgbj=`echo $dotavg | awk '{printf("%.f\n",$1)}' `
+dotewma=`cat $MODPATH/ipv4dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+dotewmabj=`echo $dotewma | awk '{printf("%.f\n",$1)}' `
+dotdnsavg=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 "$dotavg" | awk 'NR==1{print $2}' `
+dotdnsewma=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 "$dotewma" | awk 'NR==1{print $2}' `
+ipv6dotavg=`cat $MODPATH/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6dotavgbj=`echo $ipv6dotavg | awk '{printf("%.f\n",$1)}' `
+ipv6dotewma=`cat $MODPATH/ipv6dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6dotewmabj=`echo $ipv6dotewma | awk '{printf("%.f\n",$1)}' `
+ipv6dotdnsavg=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 "$ipv6dotavg" | awk 'NR==1{print $2}' `
+ipv6dotdnsewma=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 "$ipv6dotewma" | awk 'NR==1{print $2}' `
 
-if [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotdnsavg != "" ]];then
+if [[ $ipv6dotdnsavg != "" && $dotavgbj -gt $ipv6dotavgbj ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
-    [[ `echo "$dotavg > $ipv6dotavg" | bc` -eq 1 ]] && settings put global private_dns_specifier $ipv6dotdnsavg || settings put global private_dns_specifier $dotdnsavg
+    settings put global private_dns_specifier $ipv6dotdnsavg
     dotspecifier=`settings get global private_dns_specifier`
-    dotavgname=`cat $MODPATH/ipv4dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
-    ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
-    [[ `echo "$dotavg > $ipv6dotavg" | bc` -eq 1 ]] && ui_print "DNS_Over_TLS：[$ipv6dotavgname] $dotspecifier " || ui_print "DNS_Over_TLS：[$dotavgname] $dotspecifier "
+    dotavgname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ui_print "DNS_Over_TLS：[$ipv6dotavgname] $dotspecifier "
     [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-    
-elif [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotdnsewma != "" ]];then
+elif [[ $dotdnsavg != "" ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
-    [[ `echo "$dotewma > $ipv6dotewma" | bc` -eq 1 ]] && settings put global private_dns_specifier $ipv6dotdnsewma || settings put global private_dns_specifier $dotdnsewma
+    settings put global private_dns_specifier $dotdnsavg
     dotspecifier=`settings get global private_dns_specifier`
-    dotewmaname=`cat $MODPATH/ipv4dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
-    ipv6dotewmaname=`cat $MODPATH/ipv6dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
-    [[ `echo "$dotewma > $ipv6dotewma" | bc` -eq 1 ]] && ui_print "DNS_Over_TLS：[$ipv6dotewmaname] $dotspecifier " || ui_print "DNS_Over_TLS：[$dotewmaname] $dotspecifier "
+    dotavgname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ui_print "DNS_Over_TLS：[$dotavgname] $dotspecifier "
+    [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
+elif [[ $ipv6dotdnsewma != "" && $dotewmabj -gt $ipv6dotewmabj ]];then
+    ui_print "$echoprint"
+    ui_print "- 【系统支持DNS Over TLS】"
+    settings put global private_dns_specifier $ipv6dotdnsewma
+    dotspecifier=`settings get global private_dns_specifier`
+    dotewmaname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ipv6dotewmaname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ui_print "DNS_Over_TLS：[$ipv6dotewmaname] $dotspecifier "
+    [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
+elif [[ $dotdnsewma != "" ]];then
+    ui_print "$echoprint"
+    ui_print "- 【系统支持DNS Over TLS】"
+    settings put global private_dns_specifier $dotdnsewm
+    dotspecifier=`settings get global private_dns_specifier`
+    dotewmaname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ipv6dotewmaname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ui_print "DNS_Over_TLS：[$dotewmaname] $dotspecifier "
     [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
 fi
 
@@ -268,10 +281,10 @@ dotmode=`settings get global private_dns_mode`
 dotspecifier=`settings get global private_dns_specifier`
 iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
 ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
-ipv4Testingname=`cat $MODPATH/ipv4dns.prop | grep $iptdnsTesting | cut -d "=" -f 1`
-ipv6Testingname=`cat $MODPATH/ipv6dns.prop | grep $ipt6dnsTesting | cut -d "=" -f 1`
-dotTestingname=`cat $MODPATH/ipv4dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
-ipv6dotTestingname=`cat $MODPATH/ipv6dnsovertls.prop | grep $dotspecifier | cut -d "=" -f 1`
+ipv4Testingname=`cat $MODPATH/ipv4dns.prop | grep "$iptdnsTesting" | cut -d "=" -f 1`
+ipv6Testingname=`cat $MODPATH/ipv6dns.prop | grep "$ipt6dnsTesting" | cut -d "=" -f 1`
+dotTestingname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+ipv6dotTestingname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
 refreshtime=`date +'%Y-%m-%d %H:%M:%S'`
 
 if [[ $ipv4Testingname != "" && $ipv6Testingname != "" && $ipv6dotTestingname != "" ]];then
@@ -308,48 +321,52 @@ echo > $MODPATH/ipv6dnsovertls.log
   ui_print "$echoprint"
 
 endtime=`date +"%Y-%m-%d %H:%M:%S"`
-start_seconds=`date -d "$starttime" +%s`
-end_seconds=`date -d "$endtime" +%s`
-interval_time=$(($end_seconds-$start_seconds))
-firstday=`date +%j`
-firstweek=`date +%U`
+start_seconds=`date -d "$starttime" +"%s"`
+end_seconds=`date -d "$endtime" +"%s"`
+interval_time=$((end_seconds-start_seconds))
+firstday=`date +"%j"`
+firstweek=`date +"%U"`
 currenttime=`date +"%Y年%m月%d日 %H:%M:%S"`
-author=`cat $MODPATH/module.prop | grep author | cut -d "=" -f 2`
-sleeptime=`cat $MODPATH/service.sh | grep 'sleep' | awk 'END{print $2}' | sed -e 's/s/秒/g' -e 's/m/分钟/g' -e 's/h/小时/g' -e 's/d/天/g' `
-week=`date +'%w' | sed -e 's/0/星期日/g' -e 's/1/星期一/g' -e 's/2/星期二/g' -e 's/3/星期三/g' -e 's/4/星期四/g' -e 's/5/星期五/g' -e 's/6/星期六/g' `
+author=`cat $MODPATH/module.prop | grep 'author' | cut -d "=" -f 2`
+sleeptime=`cat $MODPATH/service.sh | grep 'sleep' | awk 'END{print $2}' | sed 's/s/秒/g;s/[0-9]$/&秒/g;s/m/分钟/g;s/h/小时/g;s/d/天/g' `
+week=`date +"%w" | sed 's/0/星期日/g;s/1/星期一/g;s/2/星期二/g;s/3/星期三/g;s/4/星期四/g;s/5/星期五/g;s/6/星期六/g' `
 #  ui_print "- 循环延时：$sleeptime"
+if `date --help >/dev/null 2>&1` ;then
   [[ $(($interval_time%3600/60)) -ge "1" ]] && ui_print "- 安装耗时：$(($interval_time%3600/60))分$(($interval_time%3600%60))秒" || ui_print "- 安装耗时：$interval_time秒"
   ui_print "- 系统时间：$currenttime $week 今年第$firstweek周/$firstday天"
-  [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 对于ROOT设备,建议安装[BusyBox]模块以完整的支持更多命令‼️"
   ui_print "$echoprint"
+fi
 
-NewVersionA=`curl --connect-timeout 5 -m 5 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
-NewVersionB=`curl --connect-timeout 5 -m 5 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
-Version=`cat $MODPATH/module.prop | grep 'version=' | cut -d '=' -f 2 | sed 's/[a-zA-Z]//g'`
+NewVersionA=`curl --connect-timeout 10 -m 10 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version=' | cut -d '=' -f 2`
+NewVersionC=`echo $NewVersionA | sed 's/[^0-9]//g'`
+NewVersionB=`curl --connect-timeout 10 -m 10 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version=' | cut -d '=' -f 2`
+NewVersionD=`echo $NewVersionB | sed 's/[^0-9]//g'`
+Version=`cat $MODPATH/module.prop | grep 'version=' | sed 's/[^0-9]//g'`
 coolapkTesting=`pm list package | grep -w 'com.coolapk.market'`
 
-if [[ $NewVersionA != "" && `echo "$NewVersionA > $Version" | bc` -eq 1 ]];then
-  ui_print "- 检测到有新版本[️GitHub🆕v$NewVersionA],可关注作者获取更新❗"
+if [[ $NewVersionC != "" && $NewVersionC -gt $Version ]];then
+  ui_print "- 检测到有新版本[️GitHub🆕$NewVersionA],可关注作者获取更新❗"
   ui_print "$echoprint"
   sleep 5
-sed -i "s/！/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g;s/！.*）/！（检测到有新版本\[️GitHub🆕v"$NewVersionA"\]❗）/g" $description
+sed -i "s/！/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g;s/！.*）/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g" $description
 am start -a android.intent.action.VIEW -d 'https://github.com/Coolapk-Code9527/-Hosts-' >/dev/null 2>&1
-elif [[ $? -ne 0 && `echo "$NewVersionB > $Version" | bc` -eq 1 ]];then
-  ui_print "- 检测到有新版本[Gitee🆕v$NewVersionB],可关注作者获取更新❗"
+elif [[ $NewVersionD != "" && $NewVersionD -gt $Version ]];then
+  ui_print "- 检测到有新版本[Gitee🆕$NewVersionB],可关注作者获取更新❗"
   ui_print "$echoprint"
   sleep 5
-sed -i "s/！/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g;s/！.*）/！（检测到有新版本\[️Gitee🆕v"$NewVersionB"\]❗）/g" $description
+sed -i "s/！/！（检测到有新版本\[️Gitee🆕"$NewVersionB"\]❗）/g;s/！.*）/！（检测到有新版本\[️Gitee🆕"$NewVersionB"\]❗）/g" $description
 am start -a android.intent.action.VIEW -d 'https://gitee.com/coolapk-code_9527/border' >/dev/null 2>&1
 elif [[ $? -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
+#  sleep 5
+#am start -d 'coolmarket://u/1539433' >/dev/null 2>&1
 fi
   ui_print "- by $author"
   ui_print " "
   ui_print " "
   ui_print " "
 
-#  sleep 5
-#am start -d coolmarket://u/1539433 >/dev/null 2>&1
+
 ##########################################################################################
 #
 # 安装框架将导出一些变量和函数。
