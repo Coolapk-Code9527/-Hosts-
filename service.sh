@@ -71,10 +71,12 @@ fi
 
 avg=`cat $MODDIR/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ewma=`cat $MODDIR/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+avgtest=`echo $avg | awk -F"/" '{printf("%.f\n",$2)}' `
+ewmatest=`echo $ewma | awk -F"/" '{printf("%.f\n",$2)}' `
 dnsavg=`cat $MODDIR/ipv4dns.log | grep -B 2 "$avg" | awk 'NR==1{print $2}' `
 dnsewma=`cat $MODDIR/ipv4dns.log | grep -B 2 "$ewma" | awk 'NR==1{print $2}' `
 
-if [[ $dnsavg != "" ]];then
+if [[ $dnsavg != "" && $avgtest -lt 150 ]];then
     iptables -t nat -F OUTPUT
     iptables -t nat -F POSTROUTING
     iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
@@ -82,7 +84,7 @@ if [[ $dnsavg != "" ]];then
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsavg:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsavg:53
     iptables -t nat -A POSTROUTING -j MASQUERADE
-elif [[ $dnsewma != "" ]];then
+elif [[ $dnsewma != "" && $ewmatest -lt 150 ]];then
     iptables -t nat -F OUTPUT
     iptables -t nat -F POSTROUTING
     iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
@@ -97,10 +99,12 @@ fi
 
 ipv6avg=`cat $MODDIR/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6ewma=`cat $MODDIR/ipv6dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6avgtest=`echo $ipv6avg | awk -F"/" '{printf("%.f\n",$2)}' `
+ipv6ewmatest=`echo $ipv6ewma | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dnsavg=`cat $MODDIR/ipv6dns.log | grep -B 2 "$ipv6avg" | awk 'NR==1{print $2}' `
 ipv6dnsewma=`cat $MODDIR/ipv6dns.log | grep -B 2 "$ipv6ewma" | awk 'NR==1{print $2}' `
 
-if [[ $ipv6dnsavg != "" ]];then
+if [[ $ipv6dnsavg != "" && $ipv6avgtest -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -F POSTROUTING
     ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
@@ -108,7 +112,7 @@ if [[ $ipv6dnsavg != "" ]];then
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ip6tables -t nat -A POSTROUTING -j MASQUERADE
-elif [[ $ipv6dnsavg != "" ]];then
+elif [[ $ipv6dnsewma != "" && $ipv6ewmatest -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -F POSTROUTING
     ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
@@ -122,26 +126,26 @@ else
 fi
 
 dotavg=`cat $MODDIR/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dotavgbj=`echo $dotavg | awk '{printf("%.f\n",$1)}' `
 dotewma=`cat $MODDIR/ipv4dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dotewmabj=`echo $dotewma | awk '{printf("%.f\n",$1)}' `
+dotavgtest=`echo $dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
+dotewmatest=`echo $dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 dotdnsavg=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 "$dotavg" | awk 'NR==1{print $2}' `
 dotdnsewma=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 "$dotewma" | awk 'NR==1{print $2}' `
 ipv6dotavg=`cat $MODDIR/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dotavgbj=`echo $ipv6dotavg | awk '{printf("%.f\n",$1)}' `
 ipv6dotewma=`cat $MODDIR/ipv6dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dotewmabj=`echo $ipv6dotewma | awk '{printf("%.f\n",$1)}' `
+ipv6dotavgtest=`echo $ipv6dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
+ipv6dotewmatest=`echo $ipv6dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dotdnsavg=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 "$ipv6dotavg" | awk 'NR==1{print $2}' `
 ipv6dotdnsewma=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 "$ipv6dotewma" | awk 'NR==1{print $2}' `
 
-if [[ $ipv6dotdnsavg != "" && $dotavgbj -gt $ipv6dotavgbj ]];then
+if [[ $ipv6dotdnsavg != "" && $dotavgtest -gt $ipv6dotavgtest && $ipv6dotavgtest -lt 150 ]];then
     settings put global private_dns_specifier $ipv6dotdnsavg
-elif [[ $dotdnsavg != "" ]];then
+elif [[ $dotdnsavg != "" && $dotavgtest -lt 150 ]];then
     settings put global private_dns_specifier $dotdnsavg
-elif [[ $ipv6dotdnsewma != "" && $dotewmabj -gt $ipv6dotewmabj ]];then
+elif [[ $ipv6dotdnsewma != "" && $dotewmatest -gt $ipv6dotewmatest && $ipv6dotewmatest -lt 150 ]];then
     settings put global private_dns_specifier $ipv6dotdnsewma
-elif [[ $dotdnsewma != "" ]];then
-    settings put global private_dns_specifier $dotdnsewm
+elif [[ $dotdnsewma != "" && $dotewmatest -lt 150 ]];then
+    settings put global private_dns_specifier $dotdnsewma
 fi
 
 description=$MODDIR/module.prop

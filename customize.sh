@@ -140,17 +140,19 @@ fi
 
 avg=`cat $MODPATH/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ewma=`cat $MODPATH/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+avgtest=`echo $avg | awk -F"/" '{printf("%.f\n",$2)}' `
+ewmatest=`echo $ewma | awk -F"/" '{printf("%.f\n",$2)}' `
 dnsavg=`cat $MODPATH/ipv4dns.log | grep -B 2 "$avg" | awk 'NR==1{print $2}' `
 dnsewma=`cat $MODPATH/ipv4dns.log | grep -B 2 "$ewma" | awk 'NR==1{print $2}' `
 avgname=`cat $MODPATH/ipv4dns.prop | grep "$dnsavg" | cut -d "=" -f 1`
 ewmaname=`cat $MODPATH/ipv4dns.prop | grep "$dnsewma" | cut -d "=" -f 1`
 
-if [[ $dnsavg != "" ]];then
+if [[ $dnsavg != "" && $avgtest -lt 150 ]];then
     iptables -t nat -F OUTPUT
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsavg:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsavg:53
     ui_print "IPV4_DNS：[$avgname] $dnsavg "
-elif [[ $dnsewma != "" ]];then
+elif [[ $dnsewma != "" && $ewmatest -lt 150 ]];then
     iptables -t nat -F OUTPUT
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
@@ -161,17 +163,19 @@ fi
 
 ipv6avg=`cat $MODPATH/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6ewma=`cat $MODPATH/ipv6dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
+ipv6avgtest=`echo $ipv6avg | awk -F"/" '{printf("%.f\n",$2)}' `
+ipv6ewmatest=`echo $ipv6ewma | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dnsavg=`cat $MODPATH/ipv6dns.log | grep -B 2 "$ipv6avg" | awk 'NR==1{print $2}' `
 ipv6dnsewma=`cat $MODPATH/ipv6dns.log | grep -B 2 "$ipv6ewma" | awk 'NR==1{print $2}' `
 ipv6avgname=`cat $MODPATH/ipv6dns.prop | grep "$ipv6dnsavg" | cut -d "=" -f 1`
 ipv6ewmaname=`cat $MODPATH/ipv6dns.prop | grep "$ipv6dnsewma" | cut -d "=" -f 1`
 
-if [[ $ipv6dnsavg != "" ]];then
+if [[ $ipv6dnsavg != "" && $ipv6avgtest -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ui_print "IPV6_DNS：[$ipv6avgname] $ipv6dnsavg "
-elif [[ $ipv6dnsavg != "" ]];then
+elif [[ $ipv6dnsewma != "" && $ipv6ewmatest -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
@@ -181,19 +185,21 @@ else
 fi
 
 dotavg=`cat $MODPATH/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dotavgbj=`echo $dotavg | awk '{printf("%.f\n",$1)}' `
 dotewma=`cat $MODPATH/ipv4dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dotewmabj=`echo $dotewma | awk '{printf("%.f\n",$1)}' `
+dotavgtest=`echo $dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
+dotewmatest=`echo $dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 dotdnsavg=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 "$dotavg" | awk 'NR==1{print $2}' `
 dotdnsewma=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 "$dotewma" | awk 'NR==1{print $2}' `
+ewmadotRoundTripTime=`cat $MODPATH/ipv4dnsovertls.log | grep -o 'ipg/ewma' | awk 'NR==1' `
+dotRoundTripTime=`cat $MODPATH/ipv4dnsovertls.log | grep -oE "min\/avg\/max|min\/avg\/max\/mdev" | awk 'NR==1' | sed 's/min/最低值/g;s/avg/平均值/g;s/max/最高值/g;s/mdev/平均偏差/g' `
 ipv6dotavg=`cat $MODPATH/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dotavgbj=`echo $ipv6dotavg | awk '{printf("%.f\n",$1)}' `
 ipv6dotewma=`cat $MODPATH/ipv6dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dotewmabj=`echo $ipv6dotewma | awk '{printf("%.f\n",$1)}' `
+ipv6dotavgtest=`echo $ipv6dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
+ipv6dotewmatest=`echo $ipv6dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dotdnsavg=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 "$ipv6dotavg" | awk 'NR==1{print $2}' `
 ipv6dotdnsewma=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 "$ipv6dotewma" | awk 'NR==1{print $2}' `
 
-if [[ $ipv6dotdnsavg != "" && $dotavgbj -gt $ipv6dotavgbj ]];then
+if [[ $ipv6dotdnsavg != "" && $dotavgtest -gt $ipv6dotavgtest && $ipv6dotavgtest -lt 150 ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
     settings put global private_dns_specifier $ipv6dotdnsavg
@@ -202,7 +208,7 @@ if [[ $ipv6dotdnsavg != "" && $dotavgbj -gt $ipv6dotavgbj ]];then
     ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ui_print "DNS_Over_TLS：[$ipv6dotavgname] $dotspecifier "
     [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-elif [[ $dotdnsavg != "" ]];then
+elif [[ $dotdnsavg != "" && $dotavgtest -lt 150 ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
     settings put global private_dns_specifier $dotdnsavg
@@ -211,7 +217,7 @@ elif [[ $dotdnsavg != "" ]];then
     ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ui_print "DNS_Over_TLS：[$dotavgname] $dotspecifier "
     [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-elif [[ $ipv6dotdnsewma != "" && $dotewmabj -gt $ipv6dotewmabj ]];then
+elif [[ $ipv6dotdnsewma != "" && $dotewmatest -gt $ipv6dotewmatest && $ipv6dotewmatest -lt 150 ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
     settings put global private_dns_specifier $ipv6dotdnsewma
@@ -220,10 +226,10 @@ elif [[ $ipv6dotdnsewma != "" && $dotewmabj -gt $ipv6dotewmabj ]];then
     ipv6dotewmaname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ui_print "DNS_Over_TLS：[$ipv6dotewmaname] $dotspecifier "
     [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-elif [[ $dotdnsewma != "" ]];then
+elif [[ $dotdnsewma != "" && $dotewmatest -lt 150 ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
-    settings put global private_dns_specifier $dotdnsewm
+    settings put global private_dns_specifier $dotdnsewma
     dotspecifier=`settings get global private_dns_specifier`
     dotewmaname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ipv6dotewmaname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
