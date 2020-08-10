@@ -68,17 +68,20 @@ fi
   ui_print "- 【清除应用Cache】"
 clearA=/data/data/*/cache/*
 clearB=/data/media/0/Android/data/*/cache/*
+clearU=/data/user_de/0/*/cache/*
 findcacheA=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheB=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
-findcacheAB=`echo | awk "{print ($findcacheA+$findcacheB)/1024}"`
+findcacheU=`du -csk $clearU | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
+findcacheAB=`echo | awk "{print ($findcacheA+$findcacheB+$findcacheU)/1024}"`
 
-if `find --help >/dev/null 2>&1` || `xargs --help >/dev/null 2>&1` ;then
-find $clearA $clearB | xargs rm -rf {} \ >/dev/null 2>&1
+if `find --help >/dev/null 2>&1` && `xargs --help >/dev/null 2>&1` ;then
+find $clearA $clearB $clearU | xargs rm -rf {} \ >/dev/null 2>&1
 rm -rf /data/media/0/miad/* >/dev/null 2>&1
 chmod 000 /data/media/0/miad >/dev/null 2>&1
 findcacheB=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheC=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
-findcacheBC=`echo | awk "{print ($findcacheB+$findcacheC)/1024}"`
+findcacheU=`du -csk $clearU | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
+findcacheBC=`echo | awk "{print ($findcacheB+$findcacheC+$findcacheU)/1024}"`
 findcacheDC=`echo | awk "{print $findcacheAB-$findcacheBC}" | awk '{printf("%.f\n",$1)}'`
   ui_print "清除：${findcacheDC} M"
   ui_print "$echoprint"
@@ -87,29 +90,6 @@ else
   ui_print "$echoprint"
 fi
 
-  ui_print "- 【禁用应用ADActivity】"
-findADActivity=`cat $MODPATH/customize.sh | grep 'pm disable ' | cut -d '>' -f 1 | awk '!/#/ {print $NF}' | cut -d '/' -f 2 | awk 'NR>1'`
-settings put global personalized_ad_time '0'
-settings put global personalized_ad_enabled '0'
-settings put global passport_ad_status 'OFF'
-# AD-Activity
-packages=`dumpsys package | grep -iE 'Package \[|com\..*\.ads\..*Activity$' | grep -iB 1 'Activity' | grep -vE '\/|\-' | grep 'Package' | cut -d '[' -f 2 | cut -d ']' -f 1`
-#enable/disable
-for AD in $packages ;do
-pm disable $AD/com.qq.e.ads.ADActivity >/dev/null 2>&1
-pm disable $AD/com.qq.e.ads.PortraitADActivity >/dev/null 2>&1
-pm disable $AD/com.qq.e.ads.LandscapeADActivity >/dev/null 2>&1
-pm disable $AD/com.qq.e.ads.RewardvideoLandscapeADActivity >/dev/null 2>&1
-pm disable $AD/com.qq.e.ads.RewardvideoPortraitADActivity >/dev/null 2>&1
-pm disable $AD/com.google.android.gms.ads.AdActivity >/dev/null 2>&1
-pm disable $AD/com.facebook.ads.AudienceNetworkActivity >/dev/null 2>&1
-pm disable $AD/com.facebook.ads.internal.ipc.RemoteANActivity >/dev/null 2>&1
-pm disable $AD/com.facebook.ads.InterstitialAdActivity >/dev/null 2>&1
-done
-  ui_print "$findADActivity"
-  ui_print "$echoprint"
-  
-  
   ui_print "- 【根据当前网络环境选择DNS】"
   
 [ -f $TMPDIR/ipv4dns.prop ] && cp -af $TMPDIR/ipv4dns.prop $MODPATH/ipv4dns.prop
@@ -318,6 +298,38 @@ echo > $MODPATH/ipv6dnsovertls.log
   ProjectAddress=`cat $hosts | grep 'https://' | awk '{print $2}'`
   ui_print "- 【订阅地址-GitHub/Gitee】"
   ui_print "$ProjectAddress"
+  ui_print "$echoprint"
+
+  ui_print "- 【禁用应用ADActivity】"
+findADActivity=`cat $MODPATH/customize.sh | grep 'pm disable $AD/' | cut -d '>' -f 1 | awk '!/#/ {print $NF}' | cut -d '/' -f 2 | awk 'NR>1'`
+settings put global personalized_ad_time '0'
+settings put global personalized_ad_enabled '0'
+settings put global passport_ad_status 'OFF'
+# AD-Activity
+packages=`dumpsys package | grep -iE 'Package \[|com\..*\.ads\..*Activity$' | grep -iB 1 'Activity' | grep -vE '\/|\-' | grep 'Package' | cut -d '[' -f 2 | cut -d ']' -f 1`
+#enable/disable
+for AD in $packages;do
+pm disable $AD/com.qq.e.ads.ADActivity >/dev/null 2>&1
+pm disable $AD/com.qq.e.ads.PortraitADActivity >/dev/null 2>&1
+pm disable $AD/com.qq.e.ads.LandscapeADActivity >/dev/null 2>&1
+pm disable $AD/com.qq.e.ads.RewardvideoLandscapeADActivity >/dev/null 2>&1
+pm disable $AD/com.qq.e.ads.RewardvideoPortraitADActivity >/dev/null 2>&1
+pm disable $AD/com.google.android.gms.ads.AdActivity >/dev/null 2>&1
+pm disable $AD/com.facebook.ads.AudienceNetworkActivity >/dev/null 2>&1
+pm disable $AD/com.facebook.ads.internal.ipc.RemoteANActivity >/dev/null 2>&1
+pm disable $AD/com.facebook.ads.InterstitialAdActivity >/dev/null 2>&1
+done
+  ui_print "- 默认禁用"
+  ui_print "$findADActivity"
+Add_ADActivity=`cat $MODPATH/adactivity.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ -s $MODPATH/adactivity.prop ]];then
+for ADDAD in $Add_ADActivity;do
+pm disable $ADDAD >/dev/null 2>&1
+done
+  ui_print "- 自定义禁用"
+  ui_print "$Add_ADActivity"
+  cat $MODPATH/adactivity.prop >> $MODPATH/uninstall.sh
+fi
   ui_print "$echoprint"
 
 endtime=`date +"%Y-%m-%d %H:%M:%S"`

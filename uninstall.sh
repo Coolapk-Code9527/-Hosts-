@@ -15,5 +15,10 @@ pm enable $AD/com.facebook.ads.internal.ipc.RemoteANActivity >/dev/null 2>&1
 pm enable $AD/com.facebook.ads.InterstitialAdActivity >/dev/null 2>&1
 done
 
-
+Add_ADActivity=`cat ${0} | sed -n '/^#start/,/#end$/p' | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ -s ${0} ]];then
+for ADDAD in $Add_ADActivity;do
+pm enable $ADDAD >/dev/null 2>&1
+done
+fi
 
