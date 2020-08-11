@@ -4,6 +4,6 @@
 #谷歌=dns.google
 #红鱼=dns.rubyfish.cn
 #Quad9=dns.quad9.net
-Adguard=dns.adguard.com
-NextDNS=dns.nextdns.io
-Cloudflare=1dot1dot1dot1.cloudflare-dns.com
+#Adguard=dns.adguard.com
+#NextDNS=dns.nextdns.io
+#Cloudflare=1dot1dot1dot1.cloudflare-dns.com

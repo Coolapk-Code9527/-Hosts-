@@ -283,6 +283,10 @@ elif [[ $ipv4Testingname != "" && $dotTestingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv6Testingname != "" && $ipv6dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv6Testingname != "" && $dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv4Testingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv6Testingname != "" ]];then

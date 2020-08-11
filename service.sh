@@ -47,28 +47,6 @@ for dns in $ipv4dns; do
 done
 fi
 
-    ip6tables -t nat -nL >/dev/null 2>&1
-if [[ $? -eq 0 && -s $MODDIR/ipv6dns.prop ]];then
-for dnss in $ipv6dns; do
-    setsid ping6 -c 100 -A -w 10 -q $dnss >> $MODDIR/ipv6dns.log
-    sleep 0.2
-done
-fi
-
-if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODDIR/ipv4dnsovertls.prop ]];then
-for dot in $ipv4dnsovertls; do
-    setsid ping -c 100 -A -w 10 -q $dot >> $MODDIR/ipv4dnsovertls.log
-    sleep 0.2
-done
-fi
-
-if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODDIR/ipv6dnsovertls.prop ]];then
-for dots in $ipv6dnsovertls; do
-    setsid ping -c 100 -A -w 10 -q $dots >> $MODDIR/ipv6dnsovertls.log
-    sleep 0.2
-done
-fi
-
 avg=`cat $MODDIR/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ewma=`cat $MODDIR/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 avgtest=`echo $avg | awk -F"/" '{printf("%.f\n",$2)}' `
@@ -97,6 +75,14 @@ else
     iptables -t nat -F POSTROUTING
 fi
 
+    ip6tables -t nat -nL >/dev/null 2>&1
+if [[ $? -eq 0 && -s $MODDIR/ipv6dns.prop ]];then
+for dnss in $ipv6dns; do
+    setsid ping6 -c 100 -A -w 10 -q $dnss >> $MODDIR/ipv6dns.log
+    sleep 0.2
+done
+fi
+
 ipv6avg=`cat $MODDIR/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6ewma=`cat $MODDIR/ipv6dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6avgtest=`echo $ipv6avg | awk -F"/" '{printf("%.f\n",$2)}' `
@@ -123,6 +109,20 @@ elif [[ $ipv6dnsewma != "" && $ipv6ewmatest -lt 150 ]];then
 else
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -F POSTROUTING
+fi
+
+if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODDIR/ipv4dnsovertls.prop ]];then
+for dot in $ipv4dnsovertls; do
+    setsid ping -c 100 -A -w 10 -q $dot >> $MODDIR/ipv4dnsovertls.log
+    sleep 0.2
+done
+fi
+
+if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODDIR/ipv6dnsovertls.prop ]];then
+for dots in $ipv6dnsovertls; do
+    setsid ping -c 100 -A -w 10 -q $dots >> $MODDIR/ipv6dnsovertls.log
+    sleep 0.2
+done
 fi
 
 dotavg=`cat $MODDIR/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
@@ -169,6 +169,10 @@ elif [[ $ipv4Testingname != "" && $dotTestingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv6Testingname != "" && $ipv6dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
+elif [[ $ipv6Testingname != "" && $dotTestingname != "" ]];then
+sed -i "s/- .*/- IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv4Testingname != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 elif [[ $ipv6Testingname != "" ]];then
@@ -185,7 +189,7 @@ echo > $MODDIR/ipv4dns.log
 echo > $MODDIR/ipv6dns.log
 echo > $MODDIR/ipv4dnsovertls.log
 echo > $MODDIR/ipv6dnsovertls.log
-sleep 3m
+sleep 10
 reset
 done
 
