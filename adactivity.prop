@@ -1,17 +1,8 @@
 #要禁用的应用服务Activity
 #start
-com.jingdong.app.mall/com.jingdong.app.mall.ad.ADActivity
 com.jingdong.app.mall/com.jingdong.app.mall.service.ADService
 tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService
 tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService tv.danmaku.bili/com.bilibili.adcommon.apkdownload.panel.ADPanelService
-tv.danmaku.bili/com.bilibili.ad.adview.download.ADDownloadManagerActivity
-tv.danmaku.bili/com.bilibili.ad.adview.download.setting.ADDownloadSettingActivity
-tv.danmaku.bili/com.bilibili.ad.adview.imax.v2.component.form.AdFormActivity
-tv.danmaku.bili/com.bilibili.ad.adview.imax.AdIMaxActivity
-tv.danmaku.bili/com.bilibili.ad.adview.imax.v2.AdIMaxV2Activity
-tv.danmaku.bili/com.bilibili.ad.adview.web.AdMWebActivity
-tv.danmaku.bili/com.bilibili.ad.adview.web.AdWebActivity
-tv.danmaku.bili/com.bilibili.ad.utils.permission.PermissionActivity
 com.qiyi.video.sdkplayer/com.iqiyi.video.qyplayersdk.cupid.activity.ADActivity
 com.qiyi.video.sdkplayer/com.iqiyi.video.qyplayersdk.cupid.activity.ADIndependentActivity
 air.tv.douyu.android/com.douyu.module.h5.adweb.AdWebActivity

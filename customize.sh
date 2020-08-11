@@ -310,32 +310,86 @@ echo > $MODPATH/ipv6dnsovertls.log
   ui_print "$ProjectAddress"
   ui_print "$echoprint"
 
-  ui_print "- 【禁用应用ADActivity】"
-findADActivity=`cat $MODPATH/customize.sh | grep 'pm disable $AD/' | cut -d '>' -f 1 | awk '!/#/ {print $NF}' | cut -d '/' -f 2 | awk 'NR>1'`
+  ui_print "- 【禁用应用Component】"
 settings put global personalized_ad_time '0'
 settings put global personalized_ad_enabled '0'
 settings put global passport_ad_status 'OFF'
-# AD-Activity
-packages=`dumpsys package | grep -iE 'Package \[|com\..*\.ads\..*Activity$' | grep -iB 1 'Activity' | grep -vE '\/|\-' | grep 'Package' | cut -d '[' -f 2 | cut -d ']' -f 1`
 #enable/disable
-for AD in $packages;do
-pm disable $AD/com.qq.e.ads.ADActivity >/dev/null 2>&1
-pm disable $AD/com.qq.e.ads.PortraitADActivity >/dev/null 2>&1
-pm disable $AD/com.qq.e.ads.LandscapeADActivity >/dev/null 2>&1
-pm disable $AD/com.qq.e.ads.RewardvideoLandscapeADActivity >/dev/null 2>&1
-pm disable $AD/com.qq.e.ads.RewardvideoPortraitADActivity >/dev/null 2>&1
-pm disable $AD/com.google.android.gms.ads.AdActivity >/dev/null 2>&1
-pm disable $AD/com.facebook.ads.AudienceNetworkActivity >/dev/null 2>&1
-pm disable $AD/com.facebook.ads.internal.ipc.RemoteANActivity >/dev/null 2>&1
-pm disable $AD/com.facebook.ads.InterstitialAdActivity >/dev/null 2>&1
+ad_package=`dumpsys package | grep -iE 'Package \[|\.ad\.' | grep -v '/' | grep -iB 1 '\.ad\.' | grep 'Package' | sed 's/.*\[//g;s/\].*//g'`
+ad_activity=`dumpsys package | grep -i '\.ad\.' | grep -vE '\/|:' | sort -b | uniq | sed 's/ //g;s/^/\/&/g'`
+if [[ "$ad_package" != "" && "$ad_activity" != "" ]];then
+for AdPackage in $ad_package;do
+  for AdActivity in $ad_activity;do
+    pm disable ${AdPackage}${AdActivity} >/dev/null 2>&1
+  done
 done
-  ui_print "- 默认禁用"
-  ui_print "$findADActivity"
+  ui_print " "
+  ui_print "- 包含.AD.应用"
+  ui_print "$ad_package"
+  ui_print "- 应用.AD.组件"
+  ui_print "$ad_activity"
+fi
+
+ads_package=`dumpsys package | grep -iE 'Package \[|\.ads\.' | grep -v '/' | grep -iB 1 '\.ads\.' | grep 'Package' | sed 's/.*\[//g;s/\].*//g'`
+ads_adactivity=`dumpsys package | grep -i '\.ads\.' | grep -vE '\/|:' | sort -b | uniq | sed 's/ //g;s/^/\/&/g'`
+if [[ "$ads_package" != "" && "$ads_adactivity" != "" ]];then
+for AdsPackage in $ads_package;do
+  for AdsActivity in $ads_adactivity;do
+    pm disable ${AdsPackage}${AdsActivity} >/dev/null 2>&1
+  done
+done
+  ui_print " "
+  ui_print "- 包含*ADS.应用"
+  ui_print "$ads_package"
+  ui_print "- 应用*ADS.组件"
+  ui_print "$ads_adactivity"
+fi
+
+ad_component=`dumpsys package | grep -i '\.ad\.' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g;s/}//g'`
+if [[ "$ad_component" != "" ]];then
+  for AdComponent in $ad_component;do
+    pm disable $AdComponent >/dev/null 2>&1
+done
+  ui_print " "
+  ui_print "- 应用包含.AD."
+  ui_print "$ad_component"
+fi
+ads_component=`dumpsys package | grep -i '.ads\.' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g;s/}//g'`
+if [[ "$ads_component" != "" ]];then
+  for AdsComponent in $ads_component;do
+    pm disable $AdsComponent >/dev/null 2>&1
+done
+  ui_print " "
+  ui_print "- 应用包含*ADS."
+  ui_print "$ads_component"
+fi
+
+ADActivity=`dumpsys package | grep -i 'ADActivity' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g'`
+if [[ "$ADActivity" != "" ]];then
+  for AD_Activity in $ADActivity;do
+    pm disable $AD_Activity >/dev/null 2>&1
+done
+  ui_print " "
+  ui_print "- 应用包含ADActivity"
+  ui_print "$ADActivity"
+fi
+
+openadsdk=`dumpsys package | grep 'openadsdk' | grep 'Provider{' | sed 's/.*Provider{.* //g;s/}//g'`
+if [[ "$openadsdk" != "" ]];then
+  for Open_Adsdk in $openadsdk;do
+    pm disable $Open_Adsdk >/dev/null 2>&1
+done
+  ui_print " "
+  ui_print "- 应用包含openadsdk"
+  ui_print "$openadsdk"
+fi
+
 Add_ADActivity=`cat $MODPATH/adactivity.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ -s $MODPATH/adactivity.prop ]];then
-for ADDAD in $Add_ADActivity;do
-pm disable $ADDAD >/dev/null 2>&1
+  for ADDAD in $Add_ADActivity;do
+    pm disable $ADDAD >/dev/null 2>&1
 done
+  ui_print " "
   ui_print "- 自定义禁用"
   ui_print "$Add_ADActivity"
   cat $MODPATH/adactivity.prop >> $MODPATH/uninstall.sh
