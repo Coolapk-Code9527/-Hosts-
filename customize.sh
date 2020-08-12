@@ -44,7 +44,7 @@ system_examineB=`df -h /system | awk 'NR==3{print "大小："$1"  已用："$2" 
   [[ -d $ModulesPath/dnss && ! -f $ModulesPath/dnss/disable ]] && ui_print "- 本模块已支持DNS更改,无需再使用其他DNS模块❗"
   [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 未检测到[busybox]模块,许多Linux命令将不能被执行,可能会发生错误‼️"
   hostsTesting=`find $ModulesPath -name "hosts" | grep -v 'hostsjj' | awk 'NR==1'`
-  [[ -f $hostsTesting && -f $ModulesPath/hostsjj/system/etc/hosts ]] && ui_print "- 如已安装了同类其他hosts模块,请停用或卸载其他hosts模块,不然可能会有冲突导致此模块hosts无法生效❗"
+  [[ -d "$hostsTesting" ]] && ui_print "- 检测到已安装有其他hosts模块,请将其停用或卸载,不然可能会有冲突导致此模块hosts无法生效‼️"
   echoprint=' ------------------------------------------------------ '
   ui_print "$echoprint"
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
@@ -58,7 +58,7 @@ if [[ "$system_examineB" = "" ]];then
   ui_print "$system_examineA"
   [[ "$systemavailC > $usageAB" ]] || ui_print "- 【system分区】剩余空间小于模块【hosts文件】大小,可能会发生错误‼️"
   ui_print "$echoprint"
-elif [[ $? -ne 0 ]];then
+elif [[ "$?" -ne 0 ]];then
   ui_print "- 【system分区】"
   ui_print "$system_examineB"
   [[ "$systemavailD > $usageAB" ]] || ui_print "- 【system分区】剩余空间小于模块【hosts文件】大小,可能会发生错误‼️"
@@ -69,15 +69,16 @@ fi
 clearA=/data/data/*/cache/*
 clearB=/data/media/0/Android/data/*/cache/*
 clearU=/data/user_de/0/*/cache/*
+if [[ -d /data/media/0/miad ]];then
+rm -rf /data/media/0/miad/* >/dev/null 2>&1
+chmod 000 /data/media/0/miad >/dev/null 2>&1
+fi
 findcacheA=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheB=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheU=`du -csk $clearU | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheAB=`echo | awk "{print ($findcacheA+$findcacheB+$findcacheU)/1024}"`
-
 if `find --help >/dev/null 2>&1` && `xargs --help >/dev/null 2>&1` ;then
 find $clearA $clearB $clearU | xargs rm -rf {} \ >/dev/null 2>&1
-rm -rf /data/media/0/miad/* >/dev/null 2>&1
-chmod 000 /data/media/0/miad >/dev/null 2>&1
 findcacheB=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheC=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheU=`du -csk $clearU | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
@@ -104,10 +105,9 @@ AndroidSDK=`getprop ro.build.version.sdk`
 dotmode=`settings get global private_dns_mode`
 iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
 ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
-#[ $iptdnsTesting != "" ] && ui_print "- 检测到本机已设置DNS目标地址转换,如除本模块外还安装了同类模块请先停用,不然可能会起冲突!"
 
-[[ $iptdnsTesting != "" ]] && iptables -t nat -F OUTPUT >/dev/null 2>&1
-[[ $ipt6dnsTesting != "" ]] && ip6tables -t nat -F OUTPUT >/dev/null 2>&1
+[[ "$iptdnsTesting" != "" ]] && iptables -t nat -F OUTPUT >/dev/null 2>&1
+[[ "$ipt6dnsTesting" != "" ]] && ip6tables -t nat -F OUTPUT >/dev/null 2>&1
 sync
 if [[ -s $MODPATH/ipv4dns.prop ]];then
 for dns in $ipv4dns; do
@@ -117,21 +117,21 @@ done
 fi
 
 ip6tables -t nat -nL >/dev/null 2>&1
-if [[ $? -eq 0 && -s $MODPATH/ipv6dns.prop ]];then
+if [[ "$?" -eq 0 && -s $MODPATH/ipv6dns.prop ]];then
 for dnss in $ipv6dns; do
     setsid ping6 -c 5 -A -w 1 $dnss >> $MODPATH/ipv6dns.log
     sleep 0.2
 done
 fi
 
-if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODPATH/ipv4dnsovertls.prop ]];then
+if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODPATH/ipv4dnsovertls.prop ]];then
 for dot in $ipv4dnsovertls; do
     setsid ping -c 5 -A -w 1 $dot >> $MODPATH/ipv4dnsovertls.log
     sleep 0.2
 done
 fi
 
-if [[ $AndroidSDK -ge "28" && $dotmode != "" && -s $MODPATH/ipv6dnsovertls.prop ]];then
+if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODPATH/ipv6dnsovertls.prop ]];then
 for dots in $ipv6dnsovertls; do
     setsid ping6 -c 5 -A -w 1 $dots >> $MODPATH/ipv6dnsovertls.log
     sleep 0.2
@@ -147,12 +147,12 @@ dnsewma=`cat $MODPATH/ipv4dns.log | grep -B 2 "$ewma" | awk 'NR==1{print $2}' `
 avgname=`cat $MODPATH/ipv4dns.prop | grep "$dnsavg" | cut -d "=" -f 1`
 ewmaname=`cat $MODPATH/ipv4dns.prop | grep "$dnsewma" | cut -d "=" -f 1`
 
-if [[ $dnsavg != "" && $avgtest -lt 150 ]];then
+if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
     iptables -t nat -F OUTPUT
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsavg:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsavg:53
     ui_print "IPV4_DNS：[$avgname] $dnsavg "
-elif [[ $dnsewma != "" && $ewmatest -lt 150 ]];then
+elif [[ "$dnsewma" != "" && "$ewmatest" -lt 150 ]];then
     iptables -t nat -F OUTPUT
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
@@ -170,12 +170,12 @@ ipv6dnsewma=`cat $MODPATH/ipv6dns.log | grep -B 2 "$ipv6ewma" | awk 'NR==1{print
 ipv6avgname=`cat $MODPATH/ipv6dns.prop | grep "$ipv6dnsavg" | cut -d "=" -f 1`
 ipv6ewmaname=`cat $MODPATH/ipv6dns.prop | grep "$ipv6dnsewma" | cut -d "=" -f 1`
 
-if [[ $ipv6dnsavg != "" && $ipv6avgtest -lt 150 ]];then
+if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ui_print "IPV6_DNS：[$ipv6avgname] $ipv6dnsavg "
-elif [[ $ipv6dnsewma != "" && $ipv6ewmatest -lt 150 ]];then
+elif [[ "$ipv6dnsewma" != "" && "$ipv6ewmatest" -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
@@ -199,7 +199,7 @@ ipv6dotewmatest=`echo $ipv6dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dotdnsavg=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 "$ipv6dotavg" | awk 'NR==1{print $2}' `
 ipv6dotdnsewma=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 "$ipv6dotewma" | awk 'NR==1{print $2}' `
 
-if [[ $ipv6dotdnsavg != "" && $dotavgtest -gt $ipv6dotavgtest && $ipv6dotavgtest -lt 150 ]];then
+if [[ "$ipv6dotdnsavg" != "" && "$dotavgtest" -gt "$ipv6dotavgtest" && "$ipv6dotavgtest" -lt 150 ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
     settings put global private_dns_specifier $ipv6dotdnsavg
@@ -207,8 +207,8 @@ if [[ $ipv6dotdnsavg != "" && $dotavgtest -gt $ipv6dotavgtest && $ipv6dotavgtest
     dotavgname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ui_print "DNS_Over_TLS：[$ipv6dotavgname] $dotspecifier "
-    [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-elif [[ $dotdnsavg != "" && $dotavgtest -lt 150 ]];then
+    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
+elif [[ "$dotdnsavg" != "" && "$dotavgtest" -lt 150 ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
     settings put global private_dns_specifier $dotdnsavg
@@ -216,8 +216,8 @@ elif [[ $dotdnsavg != "" && $dotavgtest -lt 150 ]];then
     dotavgname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ui_print "DNS_Over_TLS：[$dotavgname] $dotspecifier "
-    [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-elif [[ $ipv6dotdnsewma != "" && $dotewmatest -gt $ipv6dotewmatest && $ipv6dotewmatest -lt 150 ]];then
+    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
+elif [[ "$ipv6dotdnsewma" != "" && "$dotewmatest" -gt "$ipv6dotewmatest" && "$ipv6dotewmatest" -lt 150 ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
     settings put global private_dns_specifier $ipv6dotdnsewma
@@ -225,8 +225,8 @@ elif [[ $ipv6dotdnsewma != "" && $dotewmatest -gt $ipv6dotewmatest && $ipv6dotew
     dotewmaname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ipv6dotewmaname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ui_print "DNS_Over_TLS：[$ipv6dotewmaname] $dotspecifier "
-    [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-elif [[ $dotdnsewma != "" && $dotewmatest -lt 150 ]];then
+    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
+elif [[ "$dotdnsewma" != "" && "$dotewmatest" -lt 150 ]];then
     ui_print "$echoprint"
     ui_print "- 【系统支持DNS Over TLS】"
     settings put global private_dns_specifier $dotdnsewma
@@ -234,15 +234,15 @@ elif [[ $dotdnsewma != "" && $dotewmatest -lt 150 ]];then
     dotewmaname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ipv6dotewmaname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
     ui_print "DNS_Over_TLS：[$dotewmaname] $dotspecifier "
-    [[ $dotspecifier = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
+    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
 fi
 
-if [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotmode = "opportunistic" ]];then
+if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" = "opportunistic" ]];then
     ui_print "DNS_Over_TLS状态：[自动🔄]"
     ui_print "[DNS Over TLS]比普通DNS更安全但可能并不是很稳定,请酌情启用!"
     ui_print "仅更改服务器地址,未调整开关状态,加密DNS优先级大于iptables规则!"
     ui_print "如网络出问题请[关闭].(无法连接网络、无法加载图片、连接VPN没网等❗)"
-elif [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotmode = "off" ]];then
+elif [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" = "off" ]];then
     ui_print "DNS_Over_TLS状态：[关闭❎]"
     ui_print "如需开启："
     ui_print "[MIUI]-设置-连接与共享-私人DNS"
@@ -251,7 +251,7 @@ elif [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotmode = "off" ]];then
     ui_print "[DNS Over TLS]比普通DNS更安全但可能并不是很稳定,请酌情启用!"
     ui_print "仅更改服务器地址,未调整开关状态,加密DNS优先级大于iptables规则!"
     ui_print "如网络出问题请[关闭].(无法连接网络、无法加载图片、连接VPN没网等❗)"
-elif [[ $AndroidSDK -ge "28" && $dotmode != "" && $dotmode = "hostname" ]];then
+elif [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" = "hostname" ]];then
     ui_print "DNS_Over_TLS状态：[开启✅]"
     ui_print "如需关闭："
     ui_print "[MIUI]-设置-连接与共享-私人DNS"
@@ -273,27 +273,27 @@ dotTestingname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d
 ipv6dotTestingname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
 refreshtime=`date +'%Y-%m-%d %H:%M:%S'`
 
-if [[ $ipv4Testingname != "" && $ipv6Testingname != "" && $ipv6dotTestingname != "" ]];then
+if [[ "$ipv4Testingname" != "" && "$ipv6Testingname" != "" && "$ipv6dotTestingname" != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" && $dotTestingname != "" ]];then
+elif [[ "$ipv4Testingname" != "" && "$ipv6Testingname" != "" && "$dotTestingname" != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv4Testingname != "" && $ipv6dotTestingname != "" ]];then
+elif [[ "$ipv4Testingname" != "" && "$ipv6dotTestingname" != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv4Testingname != "" && $dotTestingname != "" ]];then
+elif [[ "$ipv4Testingname" != "" && "$dotTestingname" != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv4Testingname != "" && $ipv6Testingname != "" ]];then
+elif [[ "$ipv4Testingname" != "" && "$ipv6Testingname" != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\] - IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv6Testingname != "" && $ipv6dotTestingname != "" ]];then
+elif [[ "$ipv6Testingname" != "" && "$ipv6dotTestingname" != "" ]];then
 sed -i "s/- .*/- IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv6Testingname != "" && $dotTestingname != "" ]];then
+elif [[ "$ipv6Testingname" != "" && "$dotTestingname" != "" ]];then
 sed -i "s/- .*/- IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\] - 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv4Testingname != "" ]];then
+elif [[ "$ipv4Testingname" != "" ]];then
 sed -i "s/- .*/- IPV4：\["$ipv4Testingname"："$iptdnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv6Testingname != "" ]];then
+elif [[ "$ipv6Testingname" != "" ]];then
 sed -i "s/- .*/- IPV6：\["$ipv6Testingname"："$ipt6dnsTesting"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $ipv6dotTestingname != "" ]];then
+elif [[ "$ipv6dotTestingname" != "" ]];then
 sed -i "s/- .*/- 私人DNS：\["$ipv6dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
-elif [[ $dotTestingname != "" ]];then
+elif [[ "$dotTestingname" != "" ]];then
 sed -i "s/- .*/- 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷新时间：\[""$refreshtime""\] /g" $description
 else
 sed -i "s/- .*/- /g" $description
@@ -311,9 +311,10 @@ echo > $MODPATH/ipv6dnsovertls.log
   ui_print "$echoprint"
 
   ui_print "- 【禁用应用Component】"
-settings put global personalized_ad_time '0'
-settings put global personalized_ad_enabled '0'
-settings put global passport_ad_status 'OFF'
+[[ `settings get global personalized_ad_enabled` != "0" ]] && settings put global personalized_ad_enabled '0'
+[[ `settings get global personalized_ad_time` != "0" ]] && settings put global personalized_ad_time '0'
+[[ `settings get global passport_ad_status` != "OFF" ]] && settings put global passport_ad_status 'OFF'
+echo > $MODPATH/Component.log
 #enable/disable
 ad_package=`dumpsys package | grep -iE 'Package \[|\.ad\.' | grep -v '/' | grep -iB 1 '\.ad\.' | grep 'Package' | sed 's/.*\[//g;s/\].*//g'`
 ad_activity=`dumpsys package | grep -i '\.ad\.' | grep -vE '\/|:' | sort -b | uniq | sed 's/ //g;s/^/\/&/g'`
@@ -323,11 +324,8 @@ for AdPackage in $ad_package;do
     pm disable ${AdPackage}${AdActivity} >/dev/null 2>&1
   done
 done
-  ui_print " "
-  ui_print "- 包含.AD.应用"
-  ui_print "$ad_package"
-  ui_print "- 应用.AD.组件"
-  ui_print "$ad_activity"
+  ui_print "禁用应用包含.AD.活动"
+  echo -e "${ad_package}\n""${ad_activity}\n" >> $MODPATH/Component.log
 fi
 
 ads_package=`dumpsys package | grep -iE 'Package \[|\.ads\.' | grep -v '/' | grep -iB 1 '\.ads\.' | grep 'Package' | sed 's/.*\[//g;s/\].*//g'`
@@ -338,11 +336,8 @@ for AdsPackage in $ads_package;do
     pm disable ${AdsPackage}${AdsActivity} >/dev/null 2>&1
   done
 done
-  ui_print " "
-  ui_print "- 包含*ADS.应用"
-  ui_print "$ads_package"
-  ui_print "- 应用*ADS.组件"
-  ui_print "$ads_adactivity"
+  ui_print "禁用应用包含*ADS.活动"
+  echo -e "${ads_package}\n""${ads_adactivity}\n" >> $MODPATH/Component.log
 fi
 
 ad_component=`dumpsys package | grep -i '\.ad\.' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g;s/}//g'`
@@ -350,18 +345,26 @@ if [[ "$ad_component" != "" ]];then
   for AdComponent in $ad_component;do
     pm disable $AdComponent >/dev/null 2>&1
 done
-  ui_print " "
-  ui_print "- 应用包含.AD."
-  ui_print "$ad_component"
+  ui_print "禁用应用包含.AD.组件"
+  echo -e "${ad_component}\n" >> $MODPATH/Component.log
 fi
+
 ads_component=`dumpsys package | grep -i '.ads\.' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g;s/}//g'`
 if [[ "$ads_component" != "" ]];then
   for AdsComponent in $ads_component;do
     pm disable $AdsComponent >/dev/null 2>&1
 done
-  ui_print " "
-  ui_print "- 应用包含*ADS."
-  ui_print "$ads_component"
+  ui_print "禁用应用包含*ADS.组件"
+  echo -e "${ads_component}\n" >> $MODPATH/Component.log
+fi
+
+adsdk=`dumpsys package | grep -i 'adsdk' | grep 'Provider{' | sed 's/.*Provider{.* //g;s/}//g'`
+if [[ "$adsdk" != "" ]];then
+  for Ad_sdk in $adsdk;do
+    pm disable $Ad_sdk >/dev/null 2>&1
+done
+  ui_print "禁用应用包含ADSDK组件"
+  echo -e "${adsdk}\n" >> $MODPATH/Component.log
 fi
 
 ADActivity=`dumpsys package | grep -i 'ADActivity' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g'`
@@ -369,28 +372,19 @@ if [[ "$ADActivity" != "" ]];then
   for AD_Activity in $ADActivity;do
     pm disable $AD_Activity >/dev/null 2>&1
 done
-  ui_print " "
-  ui_print "- 应用包含ADActivity"
-  ui_print "$ADActivity"
+  ui_print "禁用应用包含ADActivity组件"
+  echo -e "${ADActivity}\n" >> $MODPATH/Component.log
 fi
 
-openadsdk=`dumpsys package | grep 'openadsdk' | grep 'Provider{' | sed 's/.*Provider{.* //g;s/}//g'`
-if [[ "$openadsdk" != "" ]];then
-  for Open_Adsdk in $openadsdk;do
-    pm disable $Open_Adsdk >/dev/null 2>&1
-done
-  ui_print " "
-  ui_print "- 应用包含openadsdk"
-  ui_print "$openadsdk"
-fi
-
+  ui_print "禁用应用Component列表保存路径：$MODPATH/Component.log"
+  
 Add_ADActivity=`cat $MODPATH/adactivity.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ -s $MODPATH/adactivity.prop ]];then
   for ADDAD in $Add_ADActivity;do
     pm disable $ADDAD >/dev/null 2>&1
 done
   ui_print " "
-  ui_print "- 自定义禁用"
+  ui_print "- 自定义禁用应用Component列表"
   ui_print "$Add_ADActivity"
   cat $MODPATH/adactivity.prop >> $MODPATH/uninstall.sh
 fi
@@ -414,25 +408,25 @@ if `date --help >/dev/null 2>&1` ;then
 fi
 
 NewVersionA=`curl --connect-timeout 10 -m 10 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version=' | cut -d '=' -f 2`
-NewVersionC=`echo $NewVersionA | sed 's/[^0-9]//g'`
-NewVersionB=`curl --connect-timeout 10 -m 10 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version=' | cut -d '=' -f 2`
-NewVersionD=`echo $NewVersionB | sed 's/[^0-9]//g'`
+NewVersionB=`echo $NewVersionA | sed 's/[^0-9]//g'`
+NewVersionC=`curl --connect-timeout 10 -m 10 -s 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version=' | cut -d '=' -f 2`
+NewVersionD=`echo $NewVersionC | sed 's/[^0-9]//g'`
 Version=`cat $MODPATH/module.prop | grep 'version=' | sed 's/[^0-9]//g'`
 coolapkTesting=`pm list package | grep -w 'com.coolapk.market'`
 
-if [[ $NewVersionC != "" && $NewVersionC -gt $Version ]];then
+if [[ "$NewVersionB" != "" && "$NewVersionB" -gt "$Version" ]];then
   ui_print "- 检测到有新版本[️GitHub🆕$NewVersionA],可关注作者获取更新❗"
   ui_print "$echoprint"
   sleep 5
 sed -i "s/！/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g;s/！.*）/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g" $description
 am start -a android.intent.action.VIEW -d 'https://github.com/Coolapk-Code9527/-Hosts-' >/dev/null 2>&1
-elif [[ $NewVersionD != "" && $NewVersionD -gt $Version ]];then
-  ui_print "- 检测到有新版本[Gitee🆕$NewVersionB],可关注作者获取更新❗"
+elif [[ "$NewVersionD" != "" && "$NewVersionD" -gt "$Version" ]];then
+  ui_print "- 检测到有新版本[Gitee🆕$NewVersionC],可关注作者获取更新❗"
   ui_print "$echoprint"
   sleep 5
-sed -i "s/！/！（检测到有新版本\[️Gitee🆕"$NewVersionB"\]❗）/g;s/！.*）/！（检测到有新版本\[️Gitee🆕"$NewVersionB"\]❗）/g" $description
+sed -i "s/！/！（检测到有新版本\[️Gitee🆕"$NewVersionC"\]❗）/g;s/！.*）/！（检测到有新版本\[️Gitee🆕"$NewVersionC"\]❗）/g" $description
 am start -a android.intent.action.VIEW -d 'https://gitee.com/coolapk-code_9527/border' >/dev/null 2>&1
-elif [[ $? -ne 0 ]];then
+elif [[ "$?" -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
 #  sleep 5
 #am start -d 'coolmarket://u/1539433' >/dev/null 2>&1

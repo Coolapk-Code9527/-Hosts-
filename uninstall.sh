@@ -34,6 +34,13 @@ if [[ "$ads_component" != "" ]];then
 done
 fi
 
+adsdk=`dumpsys package | grep -i 'adsdk' | grep 'Provider{' | sed 's/.*Provider{.* //g;s/}//g'`
+if [[ "$adsdk" != "" ]];then
+  for Ad_sdk in $adsdk;do
+    pm enable $Ad_sdk >/dev/null 2>&1
+done
+fi
+
 ADActivity=`dumpsys package | grep -i 'ADActivity' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g'`
 if [[ "$ADActivity" != "" ]];then
   for AD_Activity in $ADActivity;do
@@ -41,16 +48,8 @@ if [[ "$ADActivity" != "" ]];then
 done
 fi
 
-openadsdk=`dumpsys package | grep 'openadsdk' | grep 'Provider{' | sed 's/.*Provider{.* //g;s/}//g'`
-if [[ "$openadsdk" != "" ]];then
-  for Open_Adsdk in $openadsdk;do
-    pm enable $Open_Adsdk >/dev/null 2>&1
-done
-fi
-
-
 Add_ADActivity=`cat ${0} | sed -n '/^#start/,/#end$/p' | awk '!/#/ {print $NF}' | sed 's/ //g'`
-if [[ -s ${0} ]];then
+if [[ -s "${0}" ]];then
 for ADDAD in $Add_ADActivity;do
 pm enable $ADDAD >/dev/null 2>&1
 done

@@ -3,14 +3,9 @@
 com.jingdong.app.mall/com.jingdong.app.mall.service.ADService
 tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService
 tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService tv.danmaku.bili/com.bilibili.adcommon.apkdownload.panel.ADPanelService
-com.qiyi.video.sdkplayer/com.iqiyi.video.qyplayersdk.cupid.activity.ADActivity
-com.qiyi.video.sdkplayer/com.iqiyi.video.qyplayersdk.cupid.activity.ADIndependentActivity
 air.tv.douyu.android/com.douyu.module.h5.adweb.AdWebActivity
 com.linroid.zlive/mobi.oneway.export.AdShowActivity 
-com.kingpoint.gmcchh/cn.cj.pe.ad.MailListAdActivity
 com.duowan.kiwi/com.duowan.kiwi.adsplash.view.AdSplashActivity
-com.duowan.kiwi/com.duowan.kiwi.ad.page.ui.AdWithVideoActivity
 com.netease.cloudmusic/com.netease.cloudmusic.activity.AdActionClientInfoActivity
-com.tencent.qqmusic/com.tencent.ads.canvasad.AdCanvasActivity
 com.snda.wifilocating/com.wifi.adsdk.WifiAdWebViewActivity
 #end
