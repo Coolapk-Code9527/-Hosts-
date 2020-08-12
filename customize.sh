@@ -44,7 +44,7 @@ system_examineB=`df -h /system | awk 'NR==3{print "大小："$1"  已用："$2" 
   [[ -d $ModulesPath/dnss && ! -f $ModulesPath/dnss/disable ]] && ui_print "- 本模块已支持DNS更改,无需再使用其他DNS模块❗"
   [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 未检测到[busybox]模块,许多Linux命令将不能被执行,可能会发生错误‼️"
   hostsTesting=`find $ModulesPath -name "hosts" | grep -v 'hostsjj' | awk 'NR==1'`
-  [[ -d "$hostsTesting" ]] && ui_print "- 检测到已安装有其他hosts模块,请将其停用或卸载,不然可能会有冲突导致此模块hosts无法生效‼️"
+  [[ -e "$hostsTesting" ]] && ui_print "- 检测到已安装有其他hosts模块,请将其停用或卸载,不然可能会有冲突导致此模块hosts无法生效‼️"
   echoprint=' ------------------------------------------------------ '
   ui_print "$echoprint"
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
