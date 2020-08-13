@@ -36,7 +36,7 @@ elif [[ "$?" -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
 fi
 
-while true; do
+StartSettings() {
 ipv4dns=`cat $MODDIR/ipv4dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
 ipv6dns=`cat $MODDIR/ipv6dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
 ipv4dnsovertls=`cat $MODDIR/ipv4dnsovertls.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
@@ -187,11 +187,18 @@ sed -i "s/- .*/- 私人DNS：\["$dotTestingname"："$dotspecifier"\]   --- 刷�
 else
 sed -i "s/- .*/- /g" $description
 fi
-
 echo > $MODDIR/ipv4dns.log
 echo > $MODDIR/ipv6dns.log
 echo > $MODDIR/ipv4dnsovertls.log
 echo > $MODDIR/ipv6dnsovertls.log
+}
+
+while true; do
+WakeState=`dumpsys power | grep 'mWakefulness=' | cut -d '=' -f 2`
+DisplayState=`dumpsys power | grep 'Display Power: state=' | sed 's/.*=//g'`
+if [[ "$WakeState" == "Awake" || "$DisplayState" == "ON" ]];then
+StartSettings
+fi
 sleep 10
 reset
 done
