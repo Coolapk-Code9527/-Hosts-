@@ -20,9 +20,9 @@ Version=`cat $MODDIR/module.prop | grep 'version=' | sed 's/[^0-9]//g'`
 usage=`du $MODDIR/system/etc/hosts | awk '{print $1}'`
 sysusage=`du /system/etc/hosts | awk '{print $1}'`
 if [[ "$usage" -ne "$sysusage" ]];then
-sed -i "s/description\=/description\=『hosts未生效❌』/g;s/description\=.*』/description\=『hosts未生效❌』/g" $description
-elif [[ "$?" -ne 0 ]];then
-sed -i "s/description\=.*』/description\=/g" $description
+sed -i 's/^description=/&『hosts未生效❌』/g;s/『.*』/『hosts未生效❌』/g' $description
+else
+sed -i 's/『.*』//g' $description
 fi
 if [[ "$NewVersionB" != "" && "$NewVersionB" -gt "$Version" ]];then
 sed -i "s/！/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g;s/！.*）/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g" $description
