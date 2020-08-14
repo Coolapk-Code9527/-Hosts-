@@ -1,11 +1,8 @@
 #要禁用的应用服务Activity
 #start
-com.jingdong.app.mall/com.jingdong.app.mall.service.ADService
 tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService
-tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService tv.danmaku.bili/com.bilibili.adcommon.apkdownload.panel.ADPanelService
-air.tv.douyu.android/com.douyu.module.h5.adweb.AdWebActivity
+tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService
+tv.danmaku.bili/com.bilibili.adcommon.apkdownload.panel.ADPanelService
 com.linroid.zlive/mobi.oneway.export.AdShowActivity 
 com.duowan.kiwi/com.duowan.kiwi.adsplash.view.AdSplashActivity
-com.netease.cloudmusic/com.netease.cloudmusic.activity.AdActionClientInfoActivity
-com.snda.wifilocating/com.wifi.adsdk.WifiAdWebViewActivity
 #end

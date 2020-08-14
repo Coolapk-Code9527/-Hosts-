@@ -310,81 +310,29 @@ echo > $MODPATH/ipv6dnsovertls.log
   ui_print "$ProjectAddress"
   ui_print "$echoprint"
 
-  ui_print "- 【禁用应用Component】"
+  ui_print "- 【禁用应用Components】"
 [[ `settings get global personalized_ad_enabled` != "" ]] && settings put global personalized_ad_enabled '0'
 [[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
 echo > $MODPATH/Component.log
 #enable/disable
-ad_package=`dumpsys package | grep -iE 'Package \[|\.ad\.' | grep -v '/' | grep -iB 1 '\.ad\.' | grep 'Package' | sed 's/.*\[//g;s/\].*//g'`
-ad_activity=`dumpsys package | grep -i '\.ad\.' | grep -vE '\/|:' | sort -b | uniq | sed 's/ //g;s/^/\/&/g'`
-if [[ "$ad_package" != "" && "$ad_activity" != "" ]];then
-for AdPackage in $ad_package;do
-  for AdActivity in $ad_activity;do
-    pm disable ${AdPackage}${AdActivity} >/dev/null 2>&1
-  done
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|AdWeb|AdActivity|AdService' | grep -viE ':|=|add|load|read' | sed 's/.* //g;s/}//g'`
+if [[ "$AD_Components" != "" ]];then
+  for AD in $AD_Components;do
+    pm disable $AD >/dev/null 2>&1
 done
-  ui_print "禁用应用包含.AD.活动"
-  echo -e "应用包含.AD.活动\n${ad_package}\n""${ad_activity}\n" >> $MODPATH/Component.log
+  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|AdWeb|AdActivity|AdService|相关组件"
+  echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Component.log
+  ui_print "禁用相关应用Components列表保存路径：$MODPATH/Component.log"
 fi
 
-ads_package=`dumpsys package | grep -iE 'Package \[|\.ads\.' | grep -v '/' | grep -iB 1 '\.ads\.' | grep 'Package' | sed 's/.*\[//g;s/\].*//g'`
-ads_adactivity=`dumpsys package | grep -i '\.ads\.' | grep -vE '\/|:' | sort -b | uniq | sed 's/ //g;s/^/\/&/g'`
-if [[ "$ads_package" != "" && "$ads_adactivity" != "" ]];then
-for AdsPackage in $ads_package;do
-  for AdsActivity in $ads_adactivity;do
-    pm disable ${AdsPackage}${AdsActivity} >/dev/null 2>&1
-  done
-done
-  ui_print "禁用应用包含*ADS.活动"
-  echo -e "应用包含*ADS.活动\n${ads_package}\n""${ads_adactivity}\n" >> $MODPATH/Component.log
-fi
-
-ad_component=`dumpsys package | grep -i '\.ad\.' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g;s/}//g'`
-if [[ "$ad_component" != "" ]];then
-  for AdComponent in $ad_component;do
-    pm disable $AdComponent >/dev/null 2>&1
-done
-  ui_print "禁用应用包含.AD.组件"
-  echo -e "应用包含.AD.组件\n${ad_component}\n" >> $MODPATH/Component.log
-fi
-
-ads_component=`dumpsys package | grep -i '.ads\.' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g;s/}//g'`
-if [[ "$ads_component" != "" ]];then
-  for AdsComponent in $ads_component;do
-    pm disable $AdsComponent >/dev/null 2>&1
-done
-  ui_print "禁用应用包含*ADS.组件"
-  echo -e "应用包含*ADS.组件\n${ads_component}\n" >> $MODPATH/Component.log
-fi
-
-adsdk=`dumpsys package | grep -i 'adsdk' | grep 'Provider{' | sed 's/.*Provider{.* //g;s/}//g'`
-if [[ "$adsdk" != "" ]];then
-  for Ad_sdk in $adsdk;do
-    pm disable $Ad_sdk >/dev/null 2>&1
-done
-  ui_print "禁用应用包含ADSDK组件"
-  echo -e "应用包含ADSDK组件\n${adsdk}\n" >> $MODPATH/Component.log
-fi
-
-ADActivity=`dumpsys package | grep -i 'ADActivity' | grep '/' | grep -viE ':|=|Download|Read|Upload' | sed 's/.* //g'`
-if [[ "$ADActivity" != "" ]];then
-  for AD_Activity in $ADActivity;do
-    pm disable $AD_Activity >/dev/null 2>&1
-done
-  ui_print "禁用应用包含ADActivity组件"
-  echo -e "应用包含ADActivity组件\n${ADActivity}\n" >> $MODPATH/Component.log
-fi
-
-  ui_print "禁用应用Component列表保存路径：$MODPATH/Component.log"
-  
 Add_ADActivity=`cat $MODPATH/adactivity.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ -s $MODPATH/adactivity.prop ]];then
   for ADDAD in $Add_ADActivity;do
     pm disable $ADDAD >/dev/null 2>&1
 done
   ui_print " "
-  ui_print "- 自定义禁用应用Component列表"
+  ui_print "- 自定义禁用应用Components列表"
   ui_print "$Add_ADActivity"
   cat $MODPATH/adactivity.prop >> $MODPATH/uninstall.sh
 fi
