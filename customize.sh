@@ -314,16 +314,16 @@ echo > $MODPATH/ipv6dnsovertls.log
 [[ `settings get global personalized_ad_enabled` != "" ]] && settings put global personalized_ad_enabled '0'
 [[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
-echo > $MODPATH/Component.log
+echo > $MODPATH/Components.log
 #enable/disable
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|AdWeb|AdActivity|AdService' | grep -viE ':|=|add|load|read' | sed 's/.* //g;s/}//g'`
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|AdWeb|Advert|AdActivity|AdService' | grep -viE ':|=|add|load|read' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
 if [[ "$AD_Components" != "" ]];then
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
 done
-  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|AdWeb|AdActivity|AdService|相关组件"
-  echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Component.log
-  ui_print "禁用相关应用Components列表保存路径：$MODPATH/Component.log"
+  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|AdWeb|Advert|AdActivity|AdService|相关组件"
+  echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Components.log
+  ui_print "禁用相关应用Components列表保存路径：$MODPATH/Components.log"
 fi
 
 Add_ADActivity=`cat $MODPATH/adactivity.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
