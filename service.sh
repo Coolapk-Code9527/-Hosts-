@@ -61,23 +61,18 @@ dnsewma=`cat $MODDIR/ipv4dns.log | grep -B 2 "$ewma" | awk 'NR==1{print $2}' `
 
 if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
     iptables -t nat -F OUTPUT
-    iptables -t nat -F POSTROUTING
     iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
     iptables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsavg:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsavg:53
-    iptables -t nat -A POSTROUTING -j MASQUERADE
 elif [[ "$dnsewma" != "" && "$ewmatest" -lt 150 ]];then
     iptables -t nat -F OUTPUT
-    iptables -t nat -F POSTROUTING
     iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
     iptables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
-    iptables -t nat -A POSTROUTING -j MASQUERADE
 else
     iptables -t nat -F OUTPUT
-    iptables -t nat -F POSTROUTING
 fi
 
     ip6tables -t nat -nL >/dev/null 2>&1
@@ -97,23 +92,18 @@ ipv6dnsewma=`cat $MODDIR/ipv6dns.log | grep -B 2 "$ipv6ewma" | awk 'NR==1{print 
 
 if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
-    ip6tables -t nat -F POSTROUTING
     ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
     ip6tables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
-    ip6tables -t nat -A POSTROUTING -j MASQUERADE
 elif [[ "$ipv6dnsewma" != "" && "$ipv6ewmatest" -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
-    ip6tables -t nat -F POSTROUTING
     ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
     ip6tables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
-    ip6tables -t nat -A POSTROUTING -j MASQUERADE
 else
     ip6tables -t nat -F OUTPUT
-    ip6tables -t nat -F POSTROUTING
 fi
 
 if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv4dnsovertls.prop ]];then

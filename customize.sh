@@ -237,12 +237,12 @@ elif [[ "$dotdnsewma" != "" && "$dotewmatest" -lt 150 ]];then
     [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
 fi
 
-if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" = "opportunistic" ]];then
+if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" == "opportunistic" ]];then
     ui_print "DNS_Over_TLS状态：[自动🔄]"
     ui_print "[DNS Over TLS]比普通DNS更安全但可能并不是很稳定,请酌情启用!"
     ui_print "仅更改服务器地址,未调整开关状态,加密DNS优先级大于iptables规则!"
     ui_print "如网络出问题请[关闭].(无法连接网络、无法加载图片、连接VPN没网等❗)"
-elif [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" = "off" ]];then
+elif [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" == "off" ]];then
     ui_print "DNS_Over_TLS状态：[关闭❎]"
     ui_print "如需开启："
     ui_print "[MIUI]-设置-连接与共享-私人DNS"
@@ -251,7 +251,7 @@ elif [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" = "off" ]];then
     ui_print "[DNS Over TLS]比普通DNS更安全但可能并不是很稳定,请酌情启用!"
     ui_print "仅更改服务器地址,未调整开关状态,加密DNS优先级大于iptables规则!"
     ui_print "如网络出问题请[关闭].(无法连接网络、无法加载图片、连接VPN没网等❗)"
-elif [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" = "hostname" ]];then
+elif [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" == "hostname" ]];then
     ui_print "DNS_Over_TLS状态：[开启✅]"
     ui_print "如需关闭："
     ui_print "[MIUI]-设置-连接与共享-私人DNS"
