@@ -316,7 +316,7 @@ echo > $MODPATH/ipv6dnsovertls.log
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
 echo > $MODPATH/Components.log
 #enable/disable
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|AdWeb|Advert|AdActivity|AdService' | grep -viE ':|=|add|load|read' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|AdWeb|Advert|AdActivity|AdService' | grep -viE ':|=|add|load|read|boot' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
 if [[ "$AD_Components" != "" ]];then
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
