@@ -324,6 +324,7 @@ done
   ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|AdWeb|Advert|AdActivity|AdService|相关组件"
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Components.log
   ui_print "禁用相关应用Components列表保存路径：$MODPATH/Components.log"
+  pm enable com.sankuai.meituan.takeoutnew/.ui.page.boot.SplashAdActivity >/dev/null 2>&1
 fi
 
 Add_ADActivity=`cat $MODPATH/adactivity.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
