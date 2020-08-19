@@ -1,0 +1,5 @@
+#要启用的应用组件
+com.sankuai.meituan.takeoutnew/.ui.page.boot.SplashAdActivity
+
+
+

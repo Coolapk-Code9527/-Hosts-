@@ -69,10 +69,6 @@ fi
 clearA=/data/data/*/cache/*
 clearB=/data/media/0/Android/data/*/cache/*
 clearU=/data/user_de/0/*/cache/*
-if [[ -d /data/media/0/miad ]];then
-rm -rf /data/media/0/miad/* >/dev/null 2>&1
-chmod 000 /data/media/0/miad >/dev/null 2>&1
-fi
 findcacheA=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheB=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
 findcacheU=`du -csk $clearU | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
@@ -316,7 +312,7 @@ echo > $MODPATH/ipv6dnsovertls.log
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
 echo > $MODPATH/Components.log
 #enable/disable
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|AdWeb|Advert|AdActivity|AdService' | grep -viE ':|=|add|load|read|boot' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|AdWeb|Advert|AdActivity|AdService' | grep -viE ':|=|add|load|read' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
 if [[ "$AD_Components" != "" ]];then
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
@@ -324,21 +320,48 @@ done
   ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|AdWeb|Advert|AdActivity|AdService|相关组件"
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Components.log
   ui_print "禁用相关应用Components列表保存路径：$MODPATH/Components.log"
-  pm enable com.sankuai.meituan.takeoutnew/.ui.page.boot.SplashAdActivity >/dev/null 2>&1
 fi
 
-Add_ADActivity=`cat $MODPATH/adactivity.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
-if [[ -s $MODPATH/adactivity.prop ]];then
-  for ADDAD in $Add_ADActivity;do
-    pm disable $ADDAD >/dev/null 2>&1
+[ -f $TMPDIR/cwhitelist.prop ] && cp -af $TMPDIR/cwhitelist.prop $MODPATH/cwhitelist.prop
+AD_Whitelist=`cat $MODPATH/cwhitelist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ -s $MODPATH/cwhitelist.prop ]];then
+  for ADCW in $AD_Whitelist;do
+    pm enable $ADCW >/dev/null 2>&1
 done
+fi
+
+[ -f $TMPDIR/cblacklist.prop ] && cp -af $TMPDIR/cblacklist.prop $MODPATH/cblacklist.prop
+Add_ADActivity=`cat $MODPATH/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ -s $MODPATH/cblacklist.prop ]];then
   ui_print " "
   ui_print "- 自定义禁用应用Components列表"
-  ui_print "$Add_ADActivity"
-  cat $MODPATH/adactivity.prop >> $MODPATH/uninstall.sh
+  for ADDAD in $Add_ADActivity;do
+    pm disable $ADDAD >/dev/null 2>&1
+  sleep 0.1
+  ui_print "$ADDAD"
+done
+  cat $MODPATH/cblacklist.prop >> $MODPATH/uninstall.sh
 fi
   ui_print "$echoprint"
 
+  ui_print "- 【禁用应用广告文件执行权限】"
+[ -f $TMPDIR/adfileslist.prop ] && cp -af $TMPDIR/adfileslist.prop $MODPATH/adfileslist.prop
+AD_FilesList=`cat $MODPATH/adfileslist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ -s $MODPATH/adfileslist.prop ]];then
+  ui_print "文件路径列表："
+  for ADFL in $AD_FilesList;do
+    if [[ -d "$ADFL" ]];then
+      chattr -R -i $ADFL
+      chmod -R 660 $ADFL
+      rm -rf $ADFL/*
+      ui_print "$ADFL"
+    sleep 0.1
+  fi
+done
+  cat $MODPATH/adfileslist.prop >> $MODPATH/uninstall.sh
+fi
+  ui_print "$echoprint"
+  
 endtime=`date +"%Y-%m-%d %H:%M:%S"`
 start_seconds=`date -d "$starttime" +"%s"`
 end_seconds=`date -d "$endtime" +"%s"`

@@ -1,0 +1,12 @@
+#要禁用的应用组件
+#start
+tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService
+tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService
+tv.danmaku.bili/com.bilibili.adcommon.apkdownload.panel.ADPanelService
+com.linroid.zlive/mobi.oneway.export.AdShowActivity 
+com.duowan.kiwi/com.duowan.kiwi.adsplash.view.AdSplashActivity
+
+#end
+
+
+

@@ -35,6 +35,16 @@ sed -i "s/！/！（检测到有新版本\[️Gitee🆕"$NewVersionG"\]❗）/g;
 elif [[ "$?" -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
 fi
+AD_FilesList=`cat $MODDIR/adfileslist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ -s $MODDIR/adfileslist.prop ]];then
+  for ADFL in $AD_FilesList;do
+    if [[ -d "$ADFL" ]];then
+      chattr -R -i $ADFL
+      chmod -R 660 $ADFL
+      rm -rf $ADFL/*
+    fi
+  done
+fi
 
 StartSettings() {
 ipv4dns=`cat $MODDIR/ipv4dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`

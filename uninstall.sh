@@ -15,3 +15,13 @@ pm enable $ADDAD >/dev/null 2>&1
 done
 fi
 
+AD_FilesList=`cat ${0} | sed -n '/^\#\#START/,/\#\#END$/p' | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ -s "${0}" ]];then
+  for ADFL in $AD_FilesList;do
+    if [[ -d "$ADFL" ]];then
+      chattr -R -i $ADFL
+      chmod -R 775 $ADFL
+    fi
+  done
+fi
+
