@@ -9,15 +9,27 @@ done
 fi
 
 Add_ADActivity=`cat ${0} | sed -n '/^#start/,/#end$/p' | awk '!/#/ {print $NF}' | sed 's/ //g'`
-if [[ -s "${0}" ]];then
+if [[ "$Add_ADActivity" != "" ]];then
 for ADDAD in $Add_ADActivity;do
 pm enable $ADDAD >/dev/null 2>&1
 done
 fi
 
-AD_FilesList=`cat ${0} | sed -n '/^\#\#START/,/\#\#END$/p' | awk '!/#/ {print $NF}' | sed 's/ //g'`
-if [[ -s "${0}" ]];then
-  for ADFL in $AD_FilesList;do
+data_storage=/data/data/*
+media_storage=/data/media/0/*
+find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 7 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
+if [[ "$find_ad_files" != "" ]];then
+  for FADL in $find_ad_files;do
+    if [[ -d "$FADL" ]];then
+      chattr -R -i $FADL
+      chmod -R 775 $FADL
+  fi
+done
+fi
+
+AD_BlackFilesList=`cat ${0} | sed -n '/^\#\#START/,/\#\#END$/p' | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ "$AD_BlackFilesList" != "" ]];then
+  for ADFL in $AD_BlackFilesList;do
     if [[ -d "$ADFL" ]];then
       chattr -R -i $ADFL
       chmod -R 775 $ADFL

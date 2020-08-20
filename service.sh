@@ -17,8 +17,8 @@ NewVersionF=`echo $NewVersionE | sed 's/[^0-9]//g'`
 NewVersionG=`wget -q -T 10 -O- --no-check-certificate 'https://gitee.com/coolapk-code_9527/border/raw/master/README.md' | grep 'version=' | cut -d '=' -f 2`
 NewVersionH=`echo $NewVersionG | sed 's/[^0-9]//g'`
 Version=`cat $MODDIR/module.prop | grep 'version=' | sed 's/[^0-9]//g'`
-usage=`du $MODDIR/system/etc/hosts | awk '{print $1}'`
-sysusage=`du /system/etc/hosts | awk '{print $1}'`
+usage=`ls -i $MODDIR/system/etc/hosts | awk '/^[0-9]/ {print $1}'`
+sysusage=`ls -i /system/etc/hosts | awk '/^[0-9]/ {print $1}'`
 if [[ "$usage" -ne "$sysusage" ]];then
 sed -i 's/^description=/&『hosts未生效❌』/g;s/『.*』/『hosts未生效❌』/g' $description
 else
@@ -35,9 +35,23 @@ sed -i "s/！/！（检测到有新版本\[️Gitee🆕"$NewVersionG"\]❗）/g;
 elif [[ "$?" -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
 fi
-AD_FilesList=`cat $MODDIR/adfileslist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
-if [[ -s $MODDIR/adfileslist.prop ]];then
-  for ADFL in $AD_FilesList;do
+data_storage=/data/data/*
+media_storage=/data/media/0/*
+find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 7 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
+if [[ "$find_ad_files" != "" ]];then
+  for FADL in $find_ad_files;do
+    if [[ -d "$FADL" ]];then
+      chattr -R -i $FADL
+      chmod -R 660 $FADL
+      rm -rf $FADL/*
+  fi
+done
+  echo > $MODDIR/Adfileslist.log
+  echo -e "禁用应用广告文件执行权限列表：\n${find_ad_files}\n" >> $MODDIR/Adfileslist.log
+fi
+AD_BlackFilesList=`cat $MODDIR/adfilesblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ "$AD_BlackFilesList" != "" ]];then
+  for ADFL in $AD_BlackFilesList;do
     if [[ -d "$ADFL" ]];then
       chattr -R -i $ADFL
       chmod -R 660 $ADFL
