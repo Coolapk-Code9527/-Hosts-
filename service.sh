@@ -35,9 +35,37 @@ sed -i "s/！/！（检测到有新版本\[️Gitee🆕"$NewVersionG"\]❗）/g;
 elif [[ "$?" -ne 0 ]];then
 sed -i "s/！.*）/！/g" $description
 fi
-data_storage=/data/data/*
-media_storage=/data/media/0/*
-find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 7 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
+
+[[ `settings get global personalized_ad_enabled` != "" ]] && settings put global personalized_ad_enabled '0'
+[[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
+[[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
+
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
+if [[ "$AD_Components" != "" ]];then
+  for AD in $AD_Components;do
+    pm disable $AD >/dev/null 2>&1
+done
+  echo > $MODDIR/Components.log
+  echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODDIR/Components.log
+fi
+
+AD_Whitelist=`cat $MODDIR/cwhitelist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ "$AD_Whitelist" != "" ]];then
+  for ADCW in $AD_Whitelist;do
+    pm enable $ADCW >/dev/null 2>&1
+done
+fi
+
+Add_ADActivity=`cat $MODDIR/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ "$Add_ADActivity" != "" ]];then
+  for ADDAD in $Add_ADActivity;do
+    pm disable $ADDAD >/dev/null 2>&1
+done
+fi
+
+data_storage=/data/data
+media_storage=/data/media/0
+find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
 if [[ "$find_ad_files" != "" ]];then
   for FADL in $find_ad_files;do
     if [[ -d "$FADL" ]];then
@@ -47,20 +75,29 @@ if [[ "$find_ad_files" != "" ]];then
   fi
 done
   echo > $MODDIR/Adfileslist.log
-  echo -e "禁用应用广告文件执行权限列表：\n${find_ad_files}\n" >> $MODDIR/Adfileslist.log
+  echo -e "禁用应用广告文件夹执行权限列表：\n${find_ad_files}\n" >> $MODDIR/Adfileslist.log
 fi
-AD_BlackFilesList=`cat $MODDIR/adfilesblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
-if [[ "$AD_BlackFilesList" != "" ]];then
-  for ADFL in $AD_BlackFilesList;do
+
+AD_FilesWhiteList=`cat $MODDIR/adfileswhitelist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ "$AD_FilesWhiteList" != "" ]];then
+  for ADFW in $AD_FilesWhiteList;do
+    chattr -R -i $ADFW
+    chmod -R 775 $ADFW
+done
+fi
+
+AD_FilesBlackList=`cat $MODDIR/adfilesblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ "$AD_FilesBlackList" != "" ]];then
+  for ADFL in $AD_FilesBlackList;do
     if [[ -d "$ADFL" ]];then
       chattr -R -i $ADFL
       chmod -R 660 $ADFL
       rm -rf $ADFL/*
-    fi
-  done
+  fi
+done
 fi
 
-StartSettings() {
+DNS_Settings() {
 ipv4dns=`cat $MODDIR/ipv4dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
 ipv6dns=`cat $MODDIR/ipv6dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
 ipv4dnsovertls=`cat $MODDIR/ipv4dnsovertls.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
@@ -210,9 +247,7 @@ echo > $MODDIR/ipv6dnsovertls.log
 while true; do
 WakeState=`dumpsys power | grep 'mWakefulness=' | cut -d '=' -f 2`
 DisplayState=`dumpsys power | grep 'Display Power: state=' | sed 's/.*=//g'`
-if [[ "$WakeState" == "Awake" || "$DisplayState" == "ON" ]];then
-StartSettings
-fi
+[[ "$WakeState" == "Awake" || "$DisplayState" == "ON" ]] && DNS_Settings
 sleep 10
 reset
 done

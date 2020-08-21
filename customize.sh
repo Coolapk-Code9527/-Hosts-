@@ -43,7 +43,7 @@ system_examineB=`df -h /system | awk 'NR==3{print "大小："$1"  已用："$2" 
 
   [[ -d $ModulesPath/dnss && ! -f $ModulesPath/dnss/disable ]] && ui_print "- 本模块已支持DNS更改,无需再使用其他DNS模块❗"
   [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 未检测到[busybox]模块,许多Linux命令将不能被执行,可能会发生错误‼️"
-  hostsTesting=`find $ModulesPath -name "hosts" | grep -v 'hostsjj' | awk 'NR==1'`
+  hostsTesting=`find $ModulesPath -type f -name "hosts" | grep -v 'hostsjj' | awk 'NR==1'`
   [[ -e "$hostsTesting" ]] && ui_print "- 检测到已安装有其他hosts模块,请将其停用或卸载,不然可能会有冲突导致此模块hosts无法生效‼️"
   echoprint=' ------------------------------------------------------ '
   ui_print "$echoprint"
@@ -186,8 +186,6 @@ dotavgtest=`echo $dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
 dotewmatest=`echo $dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 dotdnsavg=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 "$dotavg" | awk 'NR==1{print $2}' `
 dotdnsewma=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 "$dotewma" | awk 'NR==1{print $2}' `
-ewmadotRoundTripTime=`cat $MODPATH/ipv4dnsovertls.log | grep -o 'ipg/ewma' | awk 'NR==1' `
-dotRoundTripTime=`cat $MODPATH/ipv4dnsovertls.log | grep -oE "min\/avg\/max|min\/avg\/max\/mdev" | awk 'NR==1' | sed 's/min/最低值/g;s/avg/平均值/g;s/max/最高值/g;s/mdev/平均偏差/g' `
 ipv6dotavg=`cat $MODPATH/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6dotewma=`cat $MODPATH/ipv6dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6dotavgtest=`echo $ipv6dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
@@ -310,10 +308,10 @@ echo > $MODPATH/ipv6dnsovertls.log
 [[ `settings get global personalized_ad_enabled` != "" ]] && settings put global personalized_ad_enabled '0'
 [[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
-#enable/disable
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|AdWeb|Advert|AdActivity|AdService' | grep -viE ':|=|add|load|read' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
+#enable/disable/default-state
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
 if [[ "$AD_Components" != "" ]];then
-  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|AdWeb|Advert|AdActivity|AdService|相关组件"
+  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
 done
@@ -344,12 +342,12 @@ done
 fi
   ui_print "$echoprint"
 
-  ui_print "- 【禁用应用广告文件执行权限】"
-data_storage=/data/data/*
-media_storage=/data/media/0/*
-find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 7 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
+  ui_print "- 【禁用应用广告文件夹执行权限】"
+data_storage=/data/data
+media_storage=/data/media/0
+find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
 if [[ "$find_ad_files" != "" ]];then
-  ui_print "禁用文件关键字包含有|_ad_|_ads_|*splash*|相关文件执行权限"
+  ui_print "禁用文件关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|*splash*|相关文件夹执行权限"
   for FADL in $find_ad_files;do
     if [[ -d "$FADL" ]];then
       chattr -R -i $FADL
@@ -358,8 +356,8 @@ if [[ "$find_ad_files" != "" ]];then
   fi
 done
   echo > $MODPATH/Adfileslist.log
-  echo -e "禁用应用广告文件执行权限列表：\n${find_ad_files}\n" >> $MODPATH/Adfileslist.log
-  ui_print "禁用应用广告文件执行权限列表保存路径：$MODPATH/Adfileslist.log"
+  echo -e "禁用应用广告文件夹执行权限列表：\n${find_ad_files}\n" >> $MODPATH/Adfileslist.log
+  ui_print "禁用应用广告文件夹执行权限列表保存路径：$MODPATH/Adfileslist.log"
 fi
 
 [ -f $TMPDIR/adfileswhitelist.prop ] && cp -af $TMPDIR/adfileswhitelist.prop $MODPATH/adfileswhitelist.prop
@@ -372,11 +370,11 @@ done
 fi
 
 [ -f $TMPDIR/adfilesblacklist.prop ] && cp -af $TMPDIR/adfilesblacklist.prop $MODPATH/adfilesblacklist.prop
-AD_BlackFilesList=`cat $MODPATH/adfilesblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
-if [[ "$AD_BlackFilesList" != "" ]];then
+AD_FilesBlackList=`cat $MODPATH/adfilesblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ "$AD_FilesBlackList" != "" ]];then
   ui_print " "
-  ui_print "- 自定义禁用文件执行权限列表"
-  for ADFL in $AD_BlackFilesList;do
+  ui_print "- 自定义禁用文件夹执行权限列表"
+  for ADFL in $AD_FilesBlackList;do
     if [[ -d "$ADFL" ]];then
       chattr -R -i $ADFL
       chmod -R 660 $ADFL
