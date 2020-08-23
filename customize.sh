@@ -35,16 +35,39 @@ ModulesPath=/data/adb/modules
 count=`wc -l $hosts | awk '{print $1}'`
 usage=`du -h $hosts | awk '{print $1}'`
 usageAB=`du $hosts | awk '{print $1}'`
-modifytime=`unzip -v $ZIPFILE | grep 'system/etc/hosts' | awk 'NR==1{print $5}' | sed -r 's/(.*)-(.*)-(.*)$/\3-\1-\2/'`
 systemavailC=`df /system | awk 'NR==2{print $4}'`
 systemavailD=`df /system | awk 'NR==3{print $3}'`
 system_examineA=`df -h /system | awk 'NR==2{print "大小："$2"  已用："$3"  剩余："$4"  占用率："$5""}'`
 system_examineB=`df -h /system | awk 'NR==3{print "大小："$1"  已用："$2"  剩余："$3"  占用率："$4""}'`
-
-  [[ -d $ModulesPath/dnss && ! -f $ModulesPath/dnss/disable ]] && ui_print "- 本模块已支持DNS更改,无需再使用其他DNS模块❗"
+hostsTesting=`find $ModulesPath -type f -name "hosts" | grep -v 'hostsjj' | awk 'NR==1'`
+modifytime=`unzip -v $ZIPFILE | grep 'system/etc/hosts' | awk 'NR==1{print $5}' | sed -r 's/(.*)-(.*)-(.*)$/\3-\1-\2/'`
+module_info=`unzip -v $ZIPFILE | grep -v '/' \
+| awk '{line[NR]=$NF} END {for(i=4 ;i<=NR-2;i++) print line[i]}'\
+|sed -e 's/module.prop/& -———- 模块信息文件/g'\
+ -e 's/system.prop/& -———- 映射system\/build.prop/g'\
+ -e 's/customize.sh/& -———- 自定义安装脚本/g'\
+ -e 's/README.md/& -———- 模块说明文件/g'\
+ -e 's/service.sh/& -———- 开机后自启脚本/g'\
+ -e 's/post-fs-data.sh/& -———- 开机前自启脚本/g'\
+ -e 's/uninstall.sh/& -———- 自定义卸载脚本/g'\
+ -e 's/sepolicy.rule/& -———- 自定义sepolicy规则/g'\
+ -e 's/ipv4dns.prop/& -———- IPV4_DNS配置文件/g'\
+ -e 's/ipv6dns.prop/& -———- IPV6_DNS配置文件/g'\
+ -e 's/ipv4dnsovertls.prop/& -———- IPV4_私人DNS配置文件/g'\
+ -e 's/ipv6dnsovertls.prop/& -———- IPV6_私人DNS配置文件/g'\
+ -e 's/cblacklist.prop/& -———- 自定义禁用组件文件/g'\
+ -e 's/cwhitelist.prop/& -———- 自定义启用组件文件/g'\
+ -e 's/adfilesblacklist.prop/& -———- 自定义禁用执行权限文件/g'\
+ -e 's/adfileswhitelist.prop/& -———- 自定义启用执行权限文件/g'`
+ 
+  set +eux
   [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 未检测到[busybox]模块,许多Linux命令将不能被执行,可能会发生错误‼️"
-  hostsTesting=`find $ModulesPath -type f -name "hosts" | grep -v 'hostsjj' | awk 'NR==1'`
   [[ -e "$hostsTesting" ]] && ui_print "- 检测到已安装有其他hosts模块,请将其停用或卸载,不然可能会有冲突导致此模块hosts无法生效‼️"
+  [[ -d $ModulesPath/dnss && ! -f $ModulesPath/dnss/disable ]] && {
+  touch $ModulesPath/dnss/disable
+  chmod 644 $ModulesPath/dnss/disable
+  ui_print "- 本模块已支持DNS更改,无需再使用其他DNS模块,已自动将其停用(重启生效)❗"
+}
   echoprint=' ------------------------------------------------------ '
   ui_print "$echoprint"
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
@@ -104,7 +127,7 @@ ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | aw
 
 [[ "$iptdnsTesting" != "" ]] && iptables -t nat -F OUTPUT >/dev/null 2>&1
 [[ "$ipt6dnsTesting" != "" ]] && ip6tables -t nat -F OUTPUT >/dev/null 2>&1
-sync
+
 if [[ -s $MODPATH/ipv4dns.prop ]];then
 for dns in $ipv4dns; do
     setsid ping -c 5 -A -w 1 $dns >> $MODPATH/ipv4dns.log
@@ -133,7 +156,8 @@ for dots in $ipv6dnsovertls; do
     sleep 0.2
 done
 fi
-
+wait
+sync
 avg=`cat $MODPATH/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ewma=`cat $MODPATH/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 avgtest=`echo $avg | awk -F"/" '{printf("%.f\n",$2)}' `
@@ -300,16 +324,18 @@ echo > $MODPATH/ipv6dnsovertls.log
 
   ui_print "$echoprint"
   ProjectAddress=`cat $hosts | grep 'https://' | awk '{print $2}'`
-  ui_print "- 【订阅地址-GitHub/Gitee】"
-  ui_print "$ProjectAddress"
-  ui_print "$echoprint"
+  [[ "$ProjectAddress" != "" ]] && {
+   ui_print "- 【订阅地址-GitHub/Gitee】" 
+   ui_print "$ProjectAddress"
+   ui_print "$echoprint"
+}
 
   ui_print "- 【禁用应用Components】"
 [[ `settings get global personalized_ad_enabled` != "" ]] && settings put global personalized_ad_enabled '0'
 [[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
 #enable/disable/default-state
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
   ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
   for AD in $AD_Components;do
@@ -318,6 +344,9 @@ done
   echo > $MODPATH/Components.log
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Components.log
   ui_print "禁用相关应用Components列表保存路径：$MODPATH/Components.log"
+else
+  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
+  ui_print "参数为空,设置失败❗"
 fi
 
 [ -f $TMPDIR/cwhitelist.prop ] && cp -af $TMPDIR/cwhitelist.prop $MODPATH/cwhitelist.prop
@@ -339,15 +368,19 @@ if [[ "$Add_ADActivity" != "" ]];then
   ui_print "$ADDAD"
 done
   cat $MODPATH/cblacklist.prop >> $MODPATH/uninstall.sh
+else
+  ui_print " "
+  ui_print "- 自定义禁用应用Components列表"
+  ui_print "参数为空,设置失败❗"
 fi
   ui_print "$echoprint"
 
   ui_print "- 【禁用应用广告文件夹执行权限】"
 data_storage=/data/data
 media_storage=/data/media/0
-find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
+find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*adnet*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
 if [[ "$find_ad_files" != "" ]];then
-  ui_print "禁用文件关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|*splash*|相关文件夹执行权限"
+  ui_print "禁用文件夹关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|adnet|splash|相关文件夹执行权限"
   for FADL in $find_ad_files;do
     if [[ -d "$FADL" ]];then
       chattr -R -i $FADL
@@ -358,6 +391,9 @@ done
   echo > $MODPATH/Adfileslist.log
   echo -e "禁用应用广告文件夹执行权限列表：\n${find_ad_files}\n" >> $MODPATH/Adfileslist.log
   ui_print "禁用应用广告文件夹执行权限列表保存路径：$MODPATH/Adfileslist.log"
+else
+  ui_print "禁用文件夹关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|adnet|splash|相关文件夹执行权限"
+  ui_print "参数为空,设置失败❗"
 fi
 
 [ -f $TMPDIR/adfileswhitelist.prop ] && cp -af $TMPDIR/adfileswhitelist.prop $MODPATH/adfileswhitelist.prop
@@ -384,8 +420,14 @@ if [[ "$AD_FilesBlackList" != "" ]];then
   fi
 done
   cat $MODPATH/adfilesblacklist.prop >> $MODPATH/uninstall.sh
+else
+  ui_print " "
+  ui_print "- 自定义禁用文件夹执行权限列表"
+  ui_print "参数为空,设置失败❗"
 fi
   ui_print "$echoprint"
+  
+  [[ "$module_info" != "" ]] && ui_print "- 【模块文件信息参照表】" && ui_print "$module_info" && ui_print "$echoprint"
   
 endtime=`date +"%Y-%m-%d %H:%M:%S"`
 start_seconds=`date -d "$starttime" +"%s"`

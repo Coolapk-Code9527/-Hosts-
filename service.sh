@@ -19,11 +19,7 @@ NewVersionH=`echo $NewVersionG | sed 's/[^0-9]//g'`
 Version=`cat $MODDIR/module.prop | grep 'version=' | sed 's/[^0-9]//g'`
 usage=`ls -i $MODDIR/system/etc/hosts | awk '/^[0-9]/ {print $1}'`
 sysusage=`ls -i /system/etc/hosts | awk '/^[0-9]/ {print $1}'`
-if [[ "$usage" -ne "$sysusage" ]];then
-sed -i 's/^description=/&『hosts未生效❌』/g;s/『.*』/『hosts未生效❌』/g' $description
-else
-sed -i 's/『.*』//g' $description
-fi
+[[ "$usage" -ne "$sysusage" ]] && sed -i 's/^description=/&『hosts未生效❌』/g;s/『.*』/『hosts未生效❌』/g' $description || sed -i 's/『.*』//g' $description
 if [[ "$NewVersionB" != "" && "$NewVersionB" -gt "$Version" ]];then
 sed -i "s/！/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g;s/！.*）/！（检测到有新版本\[️GitHub🆕"$NewVersionA"\]❗）/g" $description
 elif [[ "$NewVersionD" != "" && "$NewVersionD" -gt "$Version" ]];then
@@ -40,7 +36,7 @@ fi
 [[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
 
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g'`
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
@@ -65,7 +61,7 @@ fi
 
 data_storage=/data/data
 media_storage=/data/media/0
-find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
+find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*adnet*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
 if [[ "$find_ad_files" != "" ]];then
   for FADL in $find_ad_files;do
     if [[ -d "$FADL" ]];then
@@ -96,6 +92,7 @@ if [[ "$AD_FilesBlackList" != "" ]];then
   fi
 done
 fi
+reset
 
 DNS_Settings() {
 ipv4dns=`cat $MODDIR/ipv4dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
@@ -105,14 +102,27 @@ ipv6dnsovertls=`cat $MODDIR/ipv6dnsovertls.prop | awk '!/#/ {print $NF}' | cut -
 AndroidSDK=`getprop ro.build.version.sdk`
 dotmode=`settings get global private_dns_mode`
 dotspecifier=`settings get global private_dns_specifier`
-
+set +eux
 if [[ -s $MODDIR/ipv4dns.prop ]];then
 for dns in $ipv4dns; do
     setsid ping -c 100 -w 10 -A -q $dns >> $MODDIR/ipv4dns.log
     sleep 0.2
 done
 fi
-
+    ip6tables -t nat -nL >/dev/null 2>&1
+if [[ "$?" -eq 0 && -s $MODDIR/ipv6dns.prop ]];then
+for dnss in $ipv6dns; do
+    setsid ping6 -c 100 -A -w 10 -q $dnss >> $MODDIR/ipv6dns.log
+    sleep 0.2
+done
+fi
+if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv4dnsovertls.prop ]];then
+for dot in $ipv4dnsovertls; do
+    setsid ping -c 100 -A -w 10 -q $dot >> $MODDIR/ipv4dnsovertls.log
+    sleep 0.2
+done
+fi
+wait
 avg=`cat $MODDIR/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ewma=`cat $MODDIR/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 avgtest=`echo $avg | awk -F"/" '{printf("%.f\n",$2)}' `
@@ -136,14 +146,6 @@ else
     iptables -t nat -F OUTPUT
 fi
 
-    ip6tables -t nat -nL >/dev/null 2>&1
-if [[ "$?" -eq 0 && -s $MODDIR/ipv6dns.prop ]];then
-for dnss in $ipv6dns; do
-    setsid ping6 -c 100 -A -w 10 -q $dnss >> $MODDIR/ipv6dns.log
-    sleep 0.2
-done
-fi
-
 ipv6avg=`cat $MODDIR/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6ewma=`cat $MODDIR/ipv6dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6avgtest=`echo $ipv6avg | awk -F"/" '{printf("%.f\n",$2)}' `
@@ -165,13 +167,6 @@ elif [[ "$ipv6dnsewma" != "" && "$ipv6ewmatest" -lt 150 ]];then
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
 else
     ip6tables -t nat -F OUTPUT
-fi
-
-if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv4dnsovertls.prop ]];then
-for dot in $ipv4dnsovertls; do
-    setsid ping -c 100 -A -w 10 -q $dot >> $MODDIR/ipv4dnsovertls.log
-    sleep 0.2
-done
 fi
 
 if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv6dnsovertls.prop ]];then
@@ -244,12 +239,14 @@ echo > $MODDIR/ipv4dnsovertls.log
 echo > $MODDIR/ipv6dnsovertls.log
 }
 
+
+# 不需要自动更换DNS的删除本行以下全部内容❗
 while true; do
 WakeState=`dumpsys power | grep 'mWakefulness=' | cut -d '=' -f 2`
 DisplayState=`dumpsys power | grep 'Display Power: state=' | sed 's/.*=//g'`
 [[ "$WakeState" == "Awake" || "$DisplayState" == "ON" ]] && DNS_Settings
 sleep 10
-reset
+clear
 done
 
 
