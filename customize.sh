@@ -55,6 +55,7 @@ module_info=`unzip -v $ZIPFILE | grep -v '/' \
  -e 's/ipv6dns.prop/& -———- IPV6_DNS配置文件/g'\
  -e 's/ipv4dnsovertls.prop/& -———- IPV4_私人DNS配置文件/g'\
  -e 's/ipv6dnsovertls.prop/& -———- IPV6_私人DNS配置文件/g'\
+ -e 's/packageswhite.prop/& -———- 应用DNS放行配置文件/g'\
  -e 's/cblacklist.prop/& -———- 自定义禁用组件文件/g'\
  -e 's/cwhitelist.prop/& -———- 自定义启用组件文件/g'\
  -e 's/adfilesblacklist.prop/& -———- 自定义禁用执行权限文件/g'\
@@ -116,6 +117,7 @@ fi
 [ -f $TMPDIR/ipv6dns.prop ] && cp -af $TMPDIR/ipv6dns.prop $MODPATH/ipv6dns.prop
 [ -f $TMPDIR/ipv4dnsovertls.prop ] && cp -af $TMPDIR/ipv4dnsovertls.prop $MODPATH/ipv4dnsovertls.prop
 [ -f $TMPDIR/ipv6dnsovertls.prop ] && cp -af $TMPDIR/ipv6dnsovertls.prop $MODPATH/ipv6dnsovertls.prop
+[ -f $TMPDIR/packageswhite.prop ] && cp -af $TMPDIR/packageswhite.prop $MODPATH/packageswhite.prop
 ipv4dns=`cat $MODPATH/ipv4dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
 ipv6dns=`cat $MODPATH/ipv6dns.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
 ipv4dnsovertls=`cat $MODPATH/ipv4dnsovertls.prop | awk '!/#/ {print $NF}' | cut -d "=" -f 2`
@@ -124,6 +126,8 @@ AndroidSDK=`getprop ro.build.version.sdk`
 dotmode=`settings get global private_dns_mode`
 iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
 ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+accept_packages=`cat $MODPATH/packageswhite.prop | awk '!/#/ {print $NF}'`
+get_package_uid(){ grep "${1}" /data/system/packages.list | awk '{print $2}' | sed 's/[^0-9]//g'; }
 
 [[ "$iptdnsTesting" != "" ]] && iptables -t nat -F OUTPUT >/dev/null 2>&1
 [[ "$ipt6dnsTesting" != "" ]] && ip6tables -t nat -F OUTPUT >/dev/null 2>&1
@@ -171,11 +175,21 @@ if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
     iptables -t nat -F OUTPUT
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsavg:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsavg:53
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && iptables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
     ui_print "IPV4_DNS：[$avgname] $dnsavg "
 elif [[ "$dnsewma" != "" && "$ewmatest" -lt 150 ]];then
     iptables -t nat -F OUTPUT
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && iptables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
     ui_print "IPV4_DNS：[$ewmaname] $dnsewma "
 else
     iptables -t nat -F OUTPUT
@@ -194,11 +208,21 @@ if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && ip6tables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
     ui_print "IPV6_DNS：[$ipv6avgname] $ipv6dnsavg "
 elif [[ "$ipv6dnsewma" != "" && "$ipv6ewmatest" -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && ip6tables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
     ui_print "IPV6_DNS：[$ipv6ewmaname] $ipv6dnsewma "
 else
     ip6tables -t nat -F OUTPUT

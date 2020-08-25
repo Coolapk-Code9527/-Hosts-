@@ -102,6 +102,8 @@ ipv6dnsovertls=`cat $MODDIR/ipv6dnsovertls.prop | awk '!/#/ {print $NF}' | cut -
 AndroidSDK=`getprop ro.build.version.sdk`
 dotmode=`settings get global private_dns_mode`
 dotspecifier=`settings get global private_dns_specifier`
+accept_packages=`cat $MODDIR/packageswhite.prop | awk '!/#/ {print $NF}'`
+get_package_uid(){ grep "${1}" /data/system/packages.list | awk '{print $2}' | sed 's/[^0-9]//g'; }
 set +eux
 if [[ -s $MODDIR/ipv4dns.prop ]];then
 for dns in $ipv4dns; do
@@ -122,6 +124,12 @@ for dot in $ipv4dnsovertls; do
     sleep 0.2
 done
 fi
+if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv6dnsovertls.prop ]];then
+for dots in $ipv6dnsovertls; do
+    setsid ping -c 100 -A -w 10 -q $dots >> $MODDIR/ipv6dnsovertls.log
+    sleep 0.2
+done
+fi
 wait
 avg=`cat $MODDIR/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ewma=`cat $MODDIR/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
@@ -136,12 +144,22 @@ if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
     iptables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsavg:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsavg:53
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && iptables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
 elif [[ "$dnsewma" != "" && "$ewmatest" -lt 150 ]];then
     iptables -t nat -F OUTPUT
     iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
     iptables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && iptables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
 else
     iptables -t nat -F OUTPUT
 fi
@@ -159,21 +177,24 @@ if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
     ip6tables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && ip6tables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
 elif [[ "$ipv6dnsewma" != "" && "$ipv6ewmatest" -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
     ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
     ip6tables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && ip6tables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
 else
     ip6tables -t nat -F OUTPUT
-fi
-
-if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv6dnsovertls.prop ]];then
-for dots in $ipv6dnsovertls; do
-    setsid ping -c 100 -A -w 10 -q $dots >> $MODDIR/ipv6dnsovertls.log
-    sleep 0.2
-done
 fi
 
 dotavg=`cat $MODDIR/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
