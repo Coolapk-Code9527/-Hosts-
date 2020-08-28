@@ -107,36 +107,33 @@ get_package_uid(){ grep "${1}" /data/system/packages.list | awk '{print $2}' | s
 set +eux
 if [[ -s $MODDIR/ipv4dns.prop ]];then
 for dns in $ipv4dns; do
-    setsid ping -c 100 -w 10 -A -q $dns >> $MODDIR/ipv4dns.log
+    setsid ping -c 20 -i 0.5 -w 10 -q $dns >> $MODDIR/ipv4dns.log
     sleep 0.2
 done
 fi
     ip6tables -t nat -nL >/dev/null 2>&1
 if [[ "$?" -eq 0 && -s $MODDIR/ipv6dns.prop ]];then
 for dnss in $ipv6dns; do
-    setsid ping6 -c 100 -A -w 10 -q $dnss >> $MODDIR/ipv6dns.log
+    setsid ping6 -c 20 -i 0.5 -w 10 -q $dnss >> $MODDIR/ipv6dns.log
     sleep 0.2
 done
 fi
 if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv4dnsovertls.prop ]];then
 for dot in $ipv4dnsovertls; do
-    setsid ping -c 100 -A -w 10 -q $dot >> $MODDIR/ipv4dnsovertls.log
+    setsid ping -c 20 -i 0.5 -w 10 -q $dot >> $MODDIR/ipv4dnsovertls.log
     sleep 0.2
 done
 fi
 if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv6dnsovertls.prop ]];then
 for dots in $ipv6dnsovertls; do
-    setsid ping -c 100 -A -w 10 -q $dots >> $MODDIR/ipv6dnsovertls.log
+    setsid ping6 -c 20 -i 0.5 -w 10 -q $dots >> $MODDIR/ipv6dnsovertls.log
     sleep 0.2
 done
 fi
 wait
 avg=`cat $MODDIR/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ewma=`cat $MODDIR/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 avgtest=`echo $avg | awk -F"/" '{printf("%.f\n",$2)}' `
-ewmatest=`echo $ewma | awk -F"/" '{printf("%.f\n",$2)}' `
 dnsavg=`cat $MODDIR/ipv4dns.log | grep -B 2 "$avg" | awk 'NR==1{print $2}' `
-dnsewma=`cat $MODDIR/ipv4dns.log | grep -B 2 "$ewma" | awk 'NR==1{print $2}' `
 
 if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
     iptables -t nat -F OUTPUT
@@ -149,27 +146,13 @@ if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
     UID=`get_package_uid $APP`
     [[ "$UID" != "" ]] && iptables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
     done;}
-elif [[ "$dnsewma" != "" && "$ewmatest" -lt 150 ]];then
-    iptables -t nat -F OUTPUT
-    iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
-    iptables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
-    iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
-    iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
-    [[ "$accept_packages" != "" ]] && {
-    for APP in $accept_packages;do
-    UID=`get_package_uid $APP`
-    [[ "$UID" != "" ]] && iptables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
-    done;}
 else
     iptables -t nat -F OUTPUT
 fi
 
 ipv6avg=`cat $MODDIR/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6ewma=`cat $MODDIR/ipv6dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6avgtest=`echo $ipv6avg | awk -F"/" '{printf("%.f\n",$2)}' `
-ipv6ewmatest=`echo $ipv6ewma | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dnsavg=`cat $MODDIR/ipv6dns.log | grep -B 2 "$ipv6avg" | awk 'NR==1{print $2}' `
-ipv6dnsewma=`cat $MODDIR/ipv6dns.log | grep -B 2 "$ipv6ewma" | awk 'NR==1{print $2}' `
 
 if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
     ip6tables -t nat -F OUTPUT
@@ -182,42 +165,21 @@ if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
     UID=`get_package_uid $APP`
     [[ "$UID" != "" ]] && ip6tables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
     done;}
-elif [[ "$ipv6dnsewma" != "" && "$ipv6ewmatest" -lt 150 ]];then
-    ip6tables -t nat -F OUTPUT
-    ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
-    ip6tables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
-    ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
-    ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
-    [[ "$accept_packages" != "" ]] && {
-    for APP in $accept_packages;do
-    UID=`get_package_uid $APP`
-    [[ "$UID" != "" ]] && ip6tables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
-    done;}
 else
     ip6tables -t nat -F OUTPUT
 fi
 
 dotavg=`cat $MODDIR/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dotewma=`cat $MODDIR/ipv4dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 dotavgtest=`echo $dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
-dotewmatest=`echo $dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 dotdnsavg=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 "$dotavg" | awk 'NR==1{print $2}' `
-dotdnsewma=`cat $MODDIR/ipv4dnsovertls.log | grep -B 2 "$dotewma" | awk 'NR==1{print $2}' `
 ipv6dotavg=`cat $MODDIR/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dotewma=`cat $MODDIR/ipv6dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6dotavgtest=`echo $ipv6dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
-ipv6dotewmatest=`echo $ipv6dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dotdnsavg=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 "$ipv6dotavg" | awk 'NR==1{print $2}' `
-ipv6dotdnsewma=`cat $MODDIR/ipv6dnsovertls.log | grep -B 2 "$ipv6dotewma" | awk 'NR==1{print $2}' `
 
 if [[ "$ipv6dotdnsavg" != "" && "$dotavgtest" -gt "$ipv6dotavgtest" && "$ipv6dotavgtest" -lt 150 ]];then
     settings put global private_dns_specifier $ipv6dotdnsavg
 elif [[ "$dotdnsavg" != "" && "$dotavgtest" -lt 150 ]];then
     settings put global private_dns_specifier $dotdnsavg
-elif [[ "$ipv6dotdnsewma" != "" && "$dotewmatest" -gt "$ipv6dotewmatest" && "$ipv6dotewmatest" -lt 150 ]];then
-    settings put global private_dns_specifier $ipv6dotdnsewma
-elif [[ "$dotdnsewma" != "" && "$dotewmatest" -lt 150 ]];then
-    settings put global private_dns_specifier $dotdnsewma
 fi
 
 description=$MODDIR/module.prop
@@ -266,7 +228,7 @@ while true; do
 WakeState=`dumpsys power | grep 'mWakefulness=' | cut -d '=' -f 2`
 DisplayState=`dumpsys power | grep 'Display Power: state=' | sed 's/.*=//g'`
 [[ "$WakeState" == "Awake" || "$DisplayState" == "ON" ]] && DNS_Settings
-sleep 10
+sleep 10m #刷新时间：s为秒，m为分钟，h为小时，d为天数，不指定单位默认为秒。
 clear
 done
 
