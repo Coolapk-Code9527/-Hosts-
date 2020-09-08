@@ -1,4 +1,6 @@
 #要启用的应用广告文件执行权限路径
-
+#UC浏览器
+/data/media/0/UCDownloads
+/data/media/0/Android/data/com.UCMobile/files/UCDownloads
 
 
