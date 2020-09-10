@@ -349,7 +349,7 @@ echo > $MODPATH/ipv6dnsovertls.log
   ui_print "$echoprint"
   ProjectAddress=`cat $hosts | grep 'https://' | awk '{print $2}'`
   [[ "$ProjectAddress" != "" ]] && {
-   ui_print "- 【订阅地址-GitHub/Gitee】" 
+   ui_print "- 【项目地址-GitHub/Gitee】" 
    ui_print "$ProjectAddress"
    ui_print "$echoprint"
 }
@@ -365,6 +365,7 @@ if [[ "$AD_Components" != "" ]];then
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
 done
+  wait
   echo > $MODPATH/Components.log
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Components.log
   ui_print "禁用相关应用Components列表保存路径：$MODPATH/Components.log"
@@ -402,7 +403,7 @@ fi
   ui_print "- 【禁用应用广告文件夹执行权限】"
 data_storage=/data/data
 media_storage=/data/media/0
-find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*adnet*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white'`
+find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*adnet*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white|mxtech'`
 if [[ "$find_ad_files" != "" ]];then
   ui_print "禁用文件夹关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|adnet|splash|相关文件夹执行权限"
   for FADL in $find_ad_files;do
@@ -412,6 +413,7 @@ if [[ "$find_ad_files" != "" ]];then
       rm -rf $FADL/*
   fi
 done
+  wait
   echo > $MODPATH/Adfileslist.log
   echo -e "禁用应用广告文件夹执行权限列表：\n${find_ad_files}\n" >> $MODPATH/Adfileslist.log
   ui_print "禁用应用广告文件夹执行权限列表保存路径：$MODPATH/Adfileslist.log"
