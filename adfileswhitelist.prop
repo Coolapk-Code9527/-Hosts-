@@ -5,4 +5,6 @@
 #MX播放器
 /data/data/com.mxtech.videoplayer.ad
 /data/media/0/Android/data/com.mxtech.videoplayer.ad
+#百度网盘
+/data/data/com.baidu.netdisk/files/ad_video_caches
 
