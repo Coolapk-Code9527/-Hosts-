@@ -6,7 +6,7 @@
 MODDIR=${0%/*}
 
 # 该脚本将在late_start服务模式下执行
-sleep 25
+sleep 30
 description=$MODDIR/module.prop
 NewVersionA=`curl --connect-timeout 10 -m 10 -s 'https://raw.githubusercontent.com/Coolapk-Code9527/-Hosts-/master/README.md' | grep 'version=' | cut -d '=' -f 2`
 NewVersionB=`echo $NewVersionA | sed 's/[^0-9]//g'`
@@ -35,6 +35,15 @@ fi
 [[ `settings get global personalized_ad_enabled` != "" ]] && settings put global personalized_ad_enabled '0'
 [[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
+
+IP_Black=`cat $MODDIR/ipblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ "$IP_Black" != "" ]];then
+  for IP in $IP_Black;do
+#   iptables -t nat -I OUTPUT -d $IP -j DNAT --to-destination 127.0.0.1
+    #REJECT --reject-with icmp-port-unreachable、icmp-net-unreachable 、icmp-host-unreachable 、icmp-proto-unreachable 、icmp-net-prohibited 、icmp-host-prohibited
+    iptables -I INPUT -s $IP -j REJECT
+  done
+fi
 
 AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then

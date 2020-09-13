@@ -56,6 +56,7 @@ module_info=`unzip -v $ZIPFILE | grep -v '/' \
  -e 's/ipv4dnsovertls.prop/& -———- IPV4_私人DNS配置文件/g'\
  -e 's/ipv6dnsovertls.prop/& -———- IPV6_私人DNS配置文件/g'\
  -e 's/packageswhite.prop/& -———- 应用DNS放行配置文件/g'\
+ -e 's/ipblacklist.prop/& -———- IP地址禁网配置文件/g'\
  -e 's/cblacklist.prop/& -———- 自定义禁用组件文件/g'\
  -e 's/cwhitelist.prop/& -———- 自定义启用组件文件/g'\
  -e 's/adfilesblacklist.prop/& -———- 自定义禁用执行权限文件/g'\
@@ -346,13 +347,23 @@ echo > $MODPATH/ipv6dns.log
 echo > $MODPATH/ipv4dnsovertls.log
 echo > $MODPATH/ipv6dnsovertls.log
 
+[ -f $TMPDIR/ipblacklist.prop ] && cp -af $TMPDIR/ipblacklist.prop $MODPATH/ipblacklist.prop
+IP_Black=`cat $MODPATH/ipblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+if [[ "$IP_Black" != "" ]];then
+  for IP in $IP_Black;do
+#   iptables -t nat -I OUTPUT -d $IP -j DNAT --to-destination 127.0.0.1
+    #REJECT --reject-with icmp-port-unreachable、icmp-net-unreachable 、icmp-host-unreachable 、icmp-proto-unreachable 、icmp-net-prohibited 、icmp-host-prohibited
+    iptables -I INPUT -s $IP -j REJECT
+  done
+fi
+
   ui_print "$echoprint"
-  ProjectAddress=`cat $hosts | grep 'https://' | awk '{print $2}'`
-  [[ "$ProjectAddress" != "" ]] && {
-   ui_print "- 【项目地址-GitHub/Gitee】" 
-   ui_print "$ProjectAddress"
-   ui_print "$echoprint"
-}
+#  ProjectAddress=`cat $hosts | grep 'https://' | awk '{print $2}'`
+#  [[ "$ProjectAddress" != "" ]] && {
+#   ui_print "- 【项目地址-GitHub/Gitee】" 
+#   ui_print "$ProjectAddress"
+#   ui_print "$echoprint"
+#}
 
   ui_print "- 【禁用应用Components】"
 [[ `settings get global personalized_ad_enabled` != "" ]] && settings put global personalized_ad_enabled '0'
@@ -365,7 +376,6 @@ if [[ "$AD_Components" != "" ]];then
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
 done
-  wait
   echo > $MODPATH/Components.log
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Components.log
   ui_print "禁用相关应用Components列表保存路径：$MODPATH/Components.log"
@@ -413,7 +423,6 @@ if [[ "$find_ad_files" != "" ]];then
       rm -rf $FADL/*
   fi
 done
-  wait
   echo > $MODPATH/Adfileslist.log
   echo -e "禁用应用广告文件夹执行权限列表：\n${find_ad_files}\n" >> $MODPATH/Adfileslist.log
   ui_print "禁用应用广告文件夹执行权限列表保存路径：$MODPATH/Adfileslist.log"
