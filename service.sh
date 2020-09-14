@@ -39,9 +39,9 @@ fi
 IP_Black=`cat $MODDIR/ipblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$IP_Black" != "" ]];then
   for IP in $IP_Black;do
-#   iptables -t nat -I OUTPUT -d $IP -j DNAT --to-destination 127.0.0.1
-    #REJECT --reject-with icmp-port-unreachable、icmp-net-unreachable 、icmp-host-unreachable 、icmp-proto-unreachable 、icmp-net-prohibited 、icmp-host-prohibited
-    iptables -I INPUT -s $IP -j REJECT
+   iptables -t nat -I OUTPUT -d ${IP} -j DNAT --to-destination 127.0.0.1
+#REJECT --reject-with icmp-port-unreachable、icmp-net-unreachable 、icmp-host-unreachable 、icmp-proto-unreachable 、icmp-net-prohibited 、icmp-host-prohibited
+#    iptables -I INPUT -s ${IP} -j REJECT
   done
 fi
 
@@ -145,9 +145,21 @@ avgtest=`echo $avg | awk -F"/" '{printf("%.f\n",$2)}' `
 dnsavg=`cat $MODDIR/ipv4dns.log | grep -B 2 "$avg" | awk 'NR==1{print $2}' `
 
 if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
-    iptables -t nat -F OUTPUT
+    DPT_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'REDIRECT' | grep 'dpt:5353 ' | awk '{print $NF}' | grep '53'`
+    [[ "$DPT_REDIRECT" != "" ]] || {
     iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
     iptables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    }
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && iptables -t nat -D OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
+    TCP_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'tcp' | grep 'dpt:53 ' | awk -F '[:]' '{print $(NF-1)}'`
+    UDP_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'udp' | grep 'dpt:53 ' | awk -F '[:]' '{print $(NF-1)}'`
+    [[ "$TCP_REDIRECT" != "" ]] && for TCP in ${TCP_REDIRECT};do iptables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination ${TCP}:53; done
+    [[ "$UDP_REDIRECT" != "" ]] && for UDP in ${UDP_REDIRECT};do iptables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination ${UDP}:53; done
+    wait
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsavg:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsavg:53
     [[ "$accept_packages" != "" ]] && {
@@ -156,7 +168,20 @@ if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
     [[ "$UID" != "" ]] && iptables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
     done;}
 else
-    iptables -t nat -F OUTPUT
+    DPT_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'REDIRECT' | grep 'dpt:5353 ' | awk '{print $NF}' | grep '53'`
+    [[ "$DPT_REDIRECT" != "" ]] && {
+    iptables -t nat -D OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    iptables -t nat -D OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    }
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && iptables -t nat -D OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
+    TCP_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'tcp' | grep 'dpt:53 ' | awk -F '[:]' '{print $(NF-1)}'`
+    UDP_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'udp' | grep 'dpt:53 ' | awk -F '[:]' '{print $(NF-1)}'`
+    [[ "$TCP_REDIRECT" != "" ]] && for TCP in ${TCP_REDIRECT};do iptables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination ${TCP}:53; done
+    [[ "$UDP_REDIRECT" != "" ]] && for UDP in ${UDP_REDIRECT};do iptables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination ${UDP}:53; done
 fi
 
 ipv6avg=`cat $MODDIR/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
@@ -164,9 +189,21 @@ ipv6avgtest=`echo $ipv6avg | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dnsavg=`cat $MODDIR/ipv6dns.log | grep -B 2 "$ipv6avg" | awk 'NR==1{print $2}' `
 
 if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
-    ip6tables -t nat -F OUTPUT
+    DPT_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'REDIRECT' | grep 'dpt:5353 ' | awk '{print $NF}' | grep '53'`
+    [[ "$DPT_REDIRECT6" != "" ]] || {
     ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
     ip6tables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    }
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && ip6tables -t nat -D OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
+    TCP_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'tcp' | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+    UDP_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'udp' | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+    [[ "$TCP_REDIRECT6" != "" ]] && for TCP6 in ${TCP_REDIRECT6};do ip6tables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination ${TCP6}:53; done
+    [[ "$UDP_REDIRECT6" != "" ]] && for UDP6 in ${UDP_REDIRECT6};do ip6tables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination ${UDP6}:53; done
+    wait
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     [[ "$accept_packages" != "" ]] && {
@@ -175,7 +212,20 @@ if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
     [[ "$UID" != "" ]] && ip6tables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
     done;}
 else
-    ip6tables -t nat -F OUTPUT
+    DPT_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'REDIRECT' | grep 'dpt:5353 ' | awk '{print $NF}' | grep '53'`
+    [[ "$DPT_REDIRECT6" != "" ]] && {
+    ip6tables -t nat -D OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    ip6tables -t nat -D OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    }
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && ip6tables -t nat -D OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
+    TCP_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'tcp' | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+    UDP_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'udp' | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+    [[ "$TCP_REDIRECT6" != "" ]] && for TCP6 in ${TCP_REDIRECT6};do ip6tables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination ${TCP6}:53; done
+    [[ "$UDP_REDIRECT6" != "" ]] && for UDP6 in ${UDP_REDIRECT6};do ip6tables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination ${UDP6}:53; done
 fi
 
 dotavg=`cat $MODDIR/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
@@ -192,8 +242,8 @@ elif [[ "$dotdnsavg" != "" && "$dotavgtest" -lt 150 ]];then
 fi
 
 description=$MODDIR/module.prop
-iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
-ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
+ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
 ipv4Testingname=`cat $MODDIR/ipv4dns.prop | grep "$iptdnsTesting" | cut -d "=" -f 1`
 ipv6Testingname=`cat $MODDIR/ipv6dns.prop | grep "$ipt6dnsTesting" | cut -d "=" -f 1`
 dotTestingname=`cat $MODDIR/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`

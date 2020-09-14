@@ -70,7 +70,7 @@ module_info=`unzip -v $ZIPFILE | grep -v '/' \
   chmod 644 $ModulesPath/dnss/disable
   ui_print "- 本模块已支持DNS更改,无需再使用其他DNS模块,已自动将其停用(重启生效)❗"
 }
-  echoprint=' ------------------------------------------------------ '
+  echoprint='━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
   ui_print "$echoprint"
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
   ui_print "$echoprint"
@@ -164,16 +164,26 @@ fi
 wait
 sync
 avg=`cat $MODPATH/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ewma=`cat $MODPATH/ipv4dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 avgtest=`echo $avg | awk -F"/" '{printf("%.f\n",$2)}' `
-ewmatest=`echo $ewma | awk -F"/" '{printf("%.f\n",$2)}' `
 dnsavg=`cat $MODPATH/ipv4dns.log | grep -B 2 "$avg" | awk 'NR==1{print $2}' `
-dnsewma=`cat $MODPATH/ipv4dns.log | grep -B 2 "$ewma" | awk 'NR==1{print $2}' `
 avgname=`cat $MODPATH/ipv4dns.prop | grep "$dnsavg" | cut -d "=" -f 1`
-ewmaname=`cat $MODPATH/ipv4dns.prop | grep "$dnsewma" | cut -d "=" -f 1`
 
 if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
-    iptables -t nat -F OUTPUT
+    DPT_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'REDIRECT' | grep 'dpt:5353 ' | awk '{print $NF}' | grep '53'`
+    [[ "$DPT_REDIRECT" != "" ]] || {
+    iptables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    iptables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    }
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && iptables -t nat -D OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
+    TCP_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'tcp' | grep 'dpt:53 ' | awk -F '[:]' '{print $(NF-1)}'`
+    UDP_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'udp' | grep 'dpt:53 ' | awk -F '[:]' '{print $(NF-1)}'`
+    [[ "$TCP_REDIRECT" != "" ]] && for TCP in ${TCP_REDIRECT};do iptables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination ${TCP}:53; done
+    [[ "$UDP_REDIRECT" != "" ]] && for UDP in ${UDP_REDIRECT};do iptables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination ${UDP}:53; done
+    wait
     iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsavg:53
     iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsavg:53
     [[ "$accept_packages" != "" ]] && {
@@ -182,31 +192,44 @@ if [[ "$dnsavg" != "" && "$avgtest" -lt 150 ]];then
     [[ "$UID" != "" ]] && iptables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
     done;}
     ui_print "IPV4_DNS：[$avgname] $dnsavg "
-elif [[ "$dnsewma" != "" && "$ewmatest" -lt 150 ]];then
-    iptables -t nat -F OUTPUT
-    iptables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $dnsewma:53
-    iptables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $dnsewma:53
+else
+    DPT_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'REDIRECT' | grep 'dpt:5353 ' | awk '{print $NF}' | grep '53'`
+    [[ "$DPT_REDIRECT" != "" ]] && {
+    iptables -t nat -D OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    iptables -t nat -D OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    }
     [[ "$accept_packages" != "" ]] && {
     for APP in $accept_packages;do
     UID=`get_package_uid $APP`
-    [[ "$UID" != "" ]] && iptables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    [[ "$UID" != "" ]] && iptables -t nat -D OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
     done;}
-    ui_print "IPV4_DNS：[$ewmaname] $dnsewma "
-else
-    iptables -t nat -F OUTPUT
+    TCP_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'tcp' | grep 'dpt:53 ' | awk -F '[:]' '{print $(NF-1)}'`
+    UDP_REDIRECT=`iptables -t nat -nL OUTPUT --line-numbers | grep 'udp' | grep 'dpt:53 ' | awk -F '[:]' '{print $(NF-1)}'`
+    [[ "$TCP_REDIRECT" != "" ]] && for TCP in ${TCP_REDIRECT};do iptables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination ${TCP}:53; done
+    [[ "$UDP_REDIRECT" != "" ]] && for UDP in ${UDP_REDIRECT};do iptables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination ${UDP}:53; done
 fi
 
 ipv6avg=`cat $MODPATH/ipv6dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6ewma=`cat $MODPATH/ipv6dns.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6avgtest=`echo $ipv6avg | awk -F"/" '{printf("%.f\n",$2)}' `
-ipv6ewmatest=`echo $ipv6ewma | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dnsavg=`cat $MODPATH/ipv6dns.log | grep -B 2 "$ipv6avg" | awk 'NR==1{print $2}' `
-ipv6dnsewma=`cat $MODPATH/ipv6dns.log | grep -B 2 "$ipv6ewma" | awk 'NR==1{print $2}' `
 ipv6avgname=`cat $MODPATH/ipv6dns.prop | grep "$ipv6dnsavg" | cut -d "=" -f 1`
-ipv6ewmaname=`cat $MODPATH/ipv6dns.prop | grep "$ipv6dnsewma" | cut -d "=" -f 1`
 
 if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
-    ip6tables -t nat -F OUTPUT
+    DPT_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'REDIRECT' | grep 'dpt:5353 ' | awk '{print $NF}' | grep '53'`
+    [[ "$DPT_REDIRECT6" != "" ]] || {
+    ip6tables -t nat -A OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    ip6tables -t nat -A OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    }
+    [[ "$accept_packages" != "" ]] && {
+    for APP in $accept_packages;do
+    UID=`get_package_uid $APP`
+    [[ "$UID" != "" ]] && ip6tables -t nat -D OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    done;}
+    TCP_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'tcp' | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+    UDP_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'udp' | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+    [[ "$TCP_REDIRECT6" != "" ]] && for TCP6 in ${TCP_REDIRECT6};do ip6tables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination ${TCP6}:53; done
+    [[ "$UDP_REDIRECT6" != "" ]] && for UDP6 in ${UDP_REDIRECT6};do ip6tables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination ${UDP6}:53; done
+    wait
     ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsavg:53
     [[ "$accept_packages" != "" ]] && {
@@ -215,71 +238,31 @@ if [[ "$ipv6dnsavg" != "" && "$ipv6avgtest" -lt 150 ]];then
     [[ "$UID" != "" ]] && ip6tables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
     done;}
     ui_print "IPV6_DNS：[$ipv6avgname] $ipv6dnsavg "
-elif [[ "$ipv6dnsewma" != "" && "$ipv6ewmatest" -lt 150 ]];then
-    ip6tables -t nat -F OUTPUT
-    ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
-    ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination $ipv6dnsewma:53
+else
+    DPT_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'REDIRECT' | grep 'dpt:5353 ' | awk '{print $NF}' | grep '53'`
+    [[ "$DPT_REDIRECT6" != "" ]] && {
+    ip6tables -t nat -D OUTPUT -p tcp --dport 5353 -j REDIRECT --to-ports 53
+    ip6tables -t nat -D OUTPUT -p udp --dport 5353 -j REDIRECT --to-ports 53
+    }
     [[ "$accept_packages" != "" ]] && {
     for APP in $accept_packages;do
     UID=`get_package_uid $APP`
-    [[ "$UID" != "" ]] && ip6tables -t nat -I OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
+    [[ "$UID" != "" ]] && ip6tables -t nat -D OUTPUT -m owner --uid-owner ${UID} -j ACCEPT || continue
     done;}
-    ui_print "IPV6_DNS：[$ipv6ewmaname] $ipv6dnsewma "
-else
-    ip6tables -t nat -F OUTPUT
+    TCP_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'tcp' | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+    UDP_REDIRECT6=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'udp' | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+    [[ "$TCP_REDIRECT6" != "" ]] && for TCP6 in ${TCP_REDIRECT6};do ip6tables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination ${TCP6}:53; done
+    [[ "$UDP_REDIRECT6" != "" ]] && for UDP6 in ${UDP_REDIRECT6};do ip6tables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination ${UDP6}:53; done
 fi
 
 dotavg=`cat $MODPATH/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-dotewma=`cat $MODPATH/ipv4dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 dotavgtest=`echo $dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
-dotewmatest=`echo $dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 dotdnsavg=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 "$dotavg" | awk 'NR==1{print $2}' `
-dotdnsewma=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 "$dotewma" | awk 'NR==1{print $2}' `
 ipv6dotavg=`cat $MODPATH/ipv6dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
-ipv6dotewma=`cat $MODPATH/ipv6dnsovertls.log | grep -w 'ipg/ewma' | sed 's/.*ipg\/ewma//g' | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 ipv6dotavgtest=`echo $ipv6dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
-ipv6dotewmatest=`echo $ipv6dotewma | awk -F"/" '{printf("%.f\n",$2)}' `
 ipv6dotdnsavg=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 "$ipv6dotavg" | awk 'NR==1{print $2}' `
-ipv6dotdnsewma=`cat $MODPATH/ipv6dnsovertls.log | grep -B 2 "$ipv6dotewma" | awk 'NR==1{print $2}' `
 
-if [[ "$ipv6dotdnsavg" != "" && "$dotavgtest" -gt "$ipv6dotavgtest" && "$ipv6dotavgtest" -lt 150 ]];then
-    ui_print "$echoprint"
-    ui_print "- 【系统支持DNS Over TLS】"
-    settings put global private_dns_specifier $ipv6dotdnsavg
-    dotspecifier=`settings get global private_dns_specifier`
-    dotavgname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
-    ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
-    ui_print "DNS_Over_TLS：[$ipv6dotavgname] $dotspecifier "
-    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-elif [[ "$dotdnsavg" != "" && "$dotavgtest" -lt 150 ]];then
-    ui_print "$echoprint"
-    ui_print "- 【系统支持DNS Over TLS】"
-    settings put global private_dns_specifier $dotdnsavg
-    dotspecifier=`settings get global private_dns_specifier`
-    dotavgname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
-    ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
-    ui_print "DNS_Over_TLS：[$dotavgname] $dotspecifier "
-    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-elif [[ "$ipv6dotdnsewma" != "" && "$dotewmatest" -gt "$ipv6dotewmatest" && "$ipv6dotewmatest" -lt 150 ]];then
-    ui_print "$echoprint"
-    ui_print "- 【系统支持DNS Over TLS】"
-    settings put global private_dns_specifier $ipv6dotdnsewma
-    dotspecifier=`settings get global private_dns_specifier`
-    dotewmaname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
-    ipv6dotewmaname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
-    ui_print "DNS_Over_TLS：[$ipv6dotewmaname] $dotspecifier "
-    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-elif [[ "$dotdnsewma" != "" && "$dotewmatest" -lt 150 ]];then
-    ui_print "$echoprint"
-    ui_print "- 【系统支持DNS Over TLS】"
-    settings put global private_dns_specifier $dotdnsewma
-    dotspecifier=`settings get global private_dns_specifier`
-    dotewmaname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
-    ipv6dotewmaname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
-    ui_print "DNS_Over_TLS：[$dotewmaname] $dotspecifier "
-    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
-fi
-
+DOT_Status() {
 if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" == "opportunistic" ]];then
     ui_print "DNS_Over_TLS状态：[自动🔄]"
     ui_print "[DNS Over TLS]比普通DNS更安全但可能并不是很稳定,请酌情启用!"
@@ -303,13 +286,35 @@ elif [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && "$dotmode" == "hostname" ]
     ui_print "[DNS Over TLS]比普通DNS更安全但可能并不是很稳定,请酌情启用!"
     ui_print "仅更改服务器地址,未调整开关状态,加密DNS优先级大于iptables规则!"
     ui_print "如网络出问题请[关闭].(无法连接网络、无法加载图片、连接VPN没网等❗)"
+fi;}
+
+if [[ "$ipv6dotdnsavg" != "" && "$dotavgtest" -gt "$ipv6dotavgtest" && "$ipv6dotavgtest" -lt 150 ]];then
+    ui_print "$echoprint"
+    ui_print "- 【系统支持DNS Over TLS】"
+    settings put global private_dns_specifier $ipv6dotdnsavg
+    dotspecifier=`settings get global private_dns_specifier`
+    dotavgname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ui_print "DNS_Over_TLS：[$ipv6dotavgname] $dotspecifier "
+    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
+    DOT_Status
+elif [[ "$dotdnsavg" != "" && "$dotavgtest" -lt 150 ]];then
+    ui_print "$echoprint"
+    ui_print "- 【系统支持DNS Over TLS】"
+    settings put global private_dns_specifier $dotdnsavg
+    dotspecifier=`settings get global private_dns_specifier`
+    dotavgname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ipv6dotavgname=`cat $MODPATH/ipv6dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
+    ui_print "DNS_Over_TLS：[$dotavgname] $dotspecifier "
+    [[ "$dotspecifier" = 'dns.cfiec.net' ]] && ui_print "此DNS服务商仅支持IPV6网络❗"
+    DOT_Status
 fi
 
 description=$MODPATH/module.prop
 dotmode=`settings get global private_dns_mode`
 dotspecifier=`settings get global private_dns_specifier`
-iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
-ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'NR==1{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
+iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
+ipt6dnsTesting=`ip6tables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | sed 's/\:53//g'`
 ipv4Testingname=`cat $MODPATH/ipv4dns.prop | grep "$iptdnsTesting" | cut -d "=" -f 1`
 ipv6Testingname=`cat $MODPATH/ipv6dns.prop | grep "$ipt6dnsTesting" | cut -d "=" -f 1`
 dotTestingname=`cat $MODPATH/ipv4dnsovertls.prop | grep "$dotspecifier" | cut -d "=" -f 1`
@@ -351,14 +356,14 @@ echo > $MODPATH/ipv6dnsovertls.log
 IP_Black=`cat $MODPATH/ipblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$IP_Black" != "" ]];then
   for IP in $IP_Black;do
-#   iptables -t nat -I OUTPUT -d $IP -j DNAT --to-destination 127.0.0.1
-    #REJECT --reject-with icmp-port-unreachable、icmp-net-unreachable 、icmp-host-unreachable 、icmp-proto-unreachable 、icmp-net-prohibited 、icmp-host-prohibited
-    iptables -I INPUT -s $IP -j REJECT
+   iptables -t nat -I OUTPUT -d ${IP} -j DNAT --to-destination 127.0.0.1
+#REJECT --reject-with icmp-port-unreachable、icmp-net-unreachable 、icmp-host-unreachable 、icmp-proto-unreachable 、icmp-net-prohibited 、icmp-host-prohibited
+#    iptables -I INPUT -s ${IP} -j REJECT
   done
 fi
 
   ui_print "$echoprint"
-#  ProjectAddress=`cat $hosts | grep 'https://' | awk '{print $2}'`
+#  ProjectAddress=`grep 'https://' $hosts | awk '{print $2}'`
 #  [[ "$ProjectAddress" != "" ]] && {
 #   ui_print "- 【项目地址-GitHub/Gitee】" 
 #   ui_print "$ProjectAddress"
@@ -395,18 +400,10 @@ fi
 [ -f $TMPDIR/cblacklist.prop ] && cp -af $TMPDIR/cblacklist.prop $MODPATH/cblacklist.prop
 Add_ADActivity=`cat $MODPATH/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$Add_ADActivity" != "" ]];then
-  ui_print " "
-  ui_print "- 自定义禁用应用Components列表"
   for ADDAD in $Add_ADActivity;do
     pm disable $ADDAD >/dev/null 2>&1
-  sleep 0.1
-  ui_print "$ADDAD"
 done
   cat $MODPATH/cblacklist.prop >> $MODPATH/uninstall.sh
-else
-  ui_print " "
-  ui_print "- 自定义禁用应用Components列表"
-  ui_print "参数为空,设置失败❗"
 fi
   ui_print "$echoprint"
 
@@ -443,22 +440,14 @@ fi
 [ -f $TMPDIR/adfilesblacklist.prop ] && cp -af $TMPDIR/adfilesblacklist.prop $MODPATH/adfilesblacklist.prop
 AD_FilesBlackList=`cat $MODPATH/adfilesblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$AD_FilesBlackList" != "" ]];then
-  ui_print " "
-  ui_print "- 自定义禁用文件夹执行权限列表"
   for ADFL in $AD_FilesBlackList;do
     if [[ -d "$ADFL" ]];then
       chattr -R -i $ADFL
       chmod -R 660 $ADFL
       rm -rf $ADFL/*
-      ui_print "$ADFL"
-    sleep 0.1
-  fi
-done
+    fi
+  done
   cat $MODPATH/adfilesblacklist.prop >> $MODPATH/uninstall.sh
-else
-  ui_print " "
-  ui_print "- 自定义禁用文件夹执行权限列表"
-  ui_print "参数为空,设置失败❗"
 fi
   ui_print "$echoprint"
   
