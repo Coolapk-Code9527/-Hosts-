@@ -45,6 +45,15 @@ if [[ "$IP_Black" != "" ]];then
   done
 fi
 
+reject_packages=`cat $MODDIR/packagesblacklist.prop | awk '!/#/ {print $NF}'`
+get_package_uid(){ grep "${1}" /data/system/packages.list | awk '{print $2}' | sed 's/[^0-9]//g'; }
+if [[ "$reject_packages" != "" ]];then
+  for APPS in $reject_packages;do
+    UIDS=`get_package_uid $APPS`
+      [[ "$UIDS" != "" ]] && iptables -t mangle -I OUTPUT -m owner --uid-owner ${UIDS} -j DROP || continue
+  done
+fi
+
 AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
   for AD in $AD_Components;do
@@ -111,7 +120,7 @@ ipv6dnsovertls=`cat $MODDIR/ipv6dnsovertls.prop | awk '!/#/ {print $NF}' | cut -
 AndroidSDK=`getprop ro.build.version.sdk`
 dotmode=`settings get global private_dns_mode`
 dotspecifier=`settings get global private_dns_specifier`
-accept_packages=`cat $MODDIR/packageswhite.prop | awk '!/#/ {print $NF}'`
+accept_packages=`cat $MODDIR/packageswhitelist.prop | awk '!/#/ {print $NF}'`
 get_package_uid(){ grep "${1}" /data/system/packages.list | awk '{print $2}' | sed 's/[^0-9]//g'; }
 set +eux
 if [[ -s $MODDIR/ipv4dns.prop ]];then
