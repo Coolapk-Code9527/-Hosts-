@@ -36,4 +36,5 @@ if [[ "$AD_FilesBlackList" != "" ]];then
   fi
 done
 fi
-
+wait
+exit 0

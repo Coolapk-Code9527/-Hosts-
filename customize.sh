@@ -92,26 +92,20 @@ elif [[ "$?" -ne 0 ]];then
 fi
 
   ui_print "- 【清除应用Cache】"
-clearA=/data/data/*/cache/*
-clearB=/data/media/0/Android/data/*/cache/*
-clearU=/data/user_de/0/*/cache/*
-findcacheA=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
-findcacheB=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
-findcacheU=`du -csk $clearU | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
-findcacheAB=`echo | awk "{print ($findcacheA+$findcacheB+$findcacheU)/1024}"`
-if `find --help >/dev/null 2>&1` ;then
-find ${clearA} ${clearB} ${clearU} -exec rm -rf {} \; >/dev/null 2>&1
-findcacheB=`du -csk $clearA | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
-findcacheC=`du -csk $clearB | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
-findcacheU=`du -csk $clearU | awk 'END{print $(NF-1)}' | sed 's/[a-zA-Z]//g'`
-findcacheBC=`echo | awk "{print ($findcacheB+$findcacheC+$findcacheU)/1024}"`
-findcacheDC=`echo | awk "{print $findcacheAB-$findcacheBC}" | awk '{printf("%.f\n",$1)}'`
-  ui_print "清除：${findcacheDC} M"
-  ui_print "$echoprint"
-else
-  ui_print "清理失败,缺少[find]工具支持,请安装[BusyBox]模块!"
-  ui_print "$echoprint"
+clearA=/data/data/*/cache
+clearB=/data/media/0/Android/data/*/cache
+clearU=/data/user_de/0/*/cache
+disk_cacheA=`du -csk ${clearA} ${clearB} ${clearU} | awk 'END{print $1/1024}' | sed 's/[a-zA-Z]//g'`
+list_cache=`ls -d ${clearA} ${clearB} ${clearU}`
+if [[ "$list_cache" != "" ]];then
+  for CLEAR in $list_cache;do
+    [[ -d "$CLEAR" ]] && rm -rf $CLEAR/*
+  done
 fi
+disk_cacheB=`du -csk ${clearA} ${clearB} ${clearU} | awk 'END{print $1/1024}' | sed 's/[a-zA-Z]//g'`
+disk_cacheC=`echo | awk "{print $disk_cacheA-$disk_cacheB}" | awk '{printf("%.f\n",$1)}'`
+  ui_print "清除：${disk_cacheC} M"
+  ui_print "$echoprint"
 
   ui_print "- 【根据当前网络环境选择DNS】"
   
@@ -137,30 +131,30 @@ get_package_uid(){ grep "${1}" /data/system/packages.list | awk '{print $2}' | s
 if [[ -s $MODPATH/ipv4dns.prop ]];then
 for dns in $ipv4dns; do
     setsid ping -c 5 -A -w 1 $dns >> $MODPATH/ipv4dns.log
-    sleep 0.2
-done
+  done
+wait
 fi
 
 ip6tables -t nat -nL >/dev/null 2>&1
 if [[ "$?" -eq 0 && -s $MODPATH/ipv6dns.prop ]];then
 for dnss in $ipv6dns; do
     setsid ping6 -c 5 -A -w 1 $dnss >> $MODPATH/ipv6dns.log
-    sleep 0.2
-done
+  done
+wait
 fi
 
 if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODPATH/ipv4dnsovertls.prop ]];then
 for dot in $ipv4dnsovertls; do
     setsid ping -c 5 -A -w 1 $dot >> $MODPATH/ipv4dnsovertls.log
-    sleep 0.2
-done
+  done
+wait
 fi
 
 if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODPATH/ipv6dnsovertls.prop ]];then
 for dots in $ipv6dnsovertls; do
     setsid ping6 -c 5 -A -w 1 $dots >> $MODPATH/ipv6dnsovertls.log
-    sleep 0.2
-done
+  done
+wait
 fi
 
 avg=`cat $MODPATH/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
@@ -507,7 +501,7 @@ fi
   ui_print " "
   ui_print " "
   ui_print " "
-  wait $$
+
 
 ##########################################################################################
 #

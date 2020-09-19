@@ -126,29 +126,29 @@ set +eux
 if [[ -s $MODDIR/ipv4dns.prop ]];then
 for dns in $ipv4dns; do
     setsid ping -c 20 -i 0.5 -w 10 -q $dns >> $MODDIR/ipv4dns.log
-    sleep 0.2
-done
+  done
+wait
 fi
     ip6tables -t nat -nL >/dev/null 2>&1
 if [[ "$?" -eq 0 && -s $MODDIR/ipv6dns.prop ]];then
 for dnss in $ipv6dns; do
     setsid ping6 -c 20 -i 0.5 -w 10 -q $dnss >> $MODDIR/ipv6dns.log
-    sleep 0.2
-done
+  done
+wait
 fi
 if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv4dnsovertls.prop ]];then
 for dot in $ipv4dnsovertls; do
     setsid ping -c 20 -i 0.5 -w 10 -q $dot >> $MODDIR/ipv4dnsovertls.log
-    sleep 0.2
-done
+  done
+wait
 fi
 if [[ "$AndroidSDK" -ge "28" && "$dotmode" != "" && -s $MODDIR/ipv6dnsovertls.prop ]];then
 for dots in $ipv6dnsovertls; do
     setsid ping6 -c 20 -i 0.5 -w 10 -q $dots >> $MODDIR/ipv6dnsovertls.log
-    sleep 0.2
-done
-fi
+  done
 wait
+fi
+
 avg=`cat $MODDIR/ipv4dns.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 avgtest=`echo $avg | awk -F"/" '{printf("%.f\n",$2)}' `
 dnsavg=`cat $MODDIR/ipv4dns.log | grep -B 2 "$avg" | awk 'NR==1{print $2}' `
