@@ -31,7 +31,7 @@ REPLACE="
 ##########################################################################################
 starttime=`date +"%Y-%m-%d %H:%M:%S"`
 hosts=$MODPATH/system/etc/hosts
-ModulesPath=/data/adb/modules
+ModulesPath=${0%/modules*}/modules
 count=`wc -l $hosts | awk '{print $1}'`
 usage=`du -h $hosts | awk '{print $1}'`
 usageAB=`du $hosts | awk '{print $1}'`
@@ -385,12 +385,16 @@ fi
 #   ui_print "$echoprint"
 #}
 
-  ui_print "- 【禁用应用Components】"
 [[ `settings get global personalized_ad_enabled` != "" ]] && settings put global personalized_ad_enabled '0'
 [[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
+ad_miui_securitycenter=/data/data/com.miui.securitycenter/files/securityscan_homelist_cache
+[[ -f "$ad_miui_securitycenter" ]] && { echo > $ad_miui_securitycenter;chattr -i $ad_miui_securitycenter;chmod 440 $ad_miui_securitycenter;am force-stop 'com.miui.securitycenter'; }
+
+  ui_print "- 【禁用应用Components】"
+
 #enable/disable/default-state
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|sync|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
   ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
   for AD in $AD_Components;do

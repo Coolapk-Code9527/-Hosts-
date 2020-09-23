@@ -2,6 +2,9 @@
 ##START
 #小米广告
 /data/media/0/miad
+#MIUI浏览器
+/data/data/com.android.browser/files/data/kw*
+/data/data/com.android.browser/files/data/banners
 #QQ音乐
 /data/media/0/Android/data/com.tencent.qqmusic/files/cache/splash
 #网易云音乐

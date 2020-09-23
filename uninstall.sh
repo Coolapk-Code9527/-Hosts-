@@ -1,7 +1,7 @@
 #!/system/bin/sh
 sleep 20
 #enable/disable/default-state
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|sync|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
   for AD in $AD_Components;do
     pm enable $AD >/dev/null 2>&1
@@ -36,5 +36,12 @@ if [[ "$AD_FilesBlackList" != "" ]];then
   fi
 done
 fi
+
+ad_miui_securitycenter=/data/data/com.miui.securitycenter/files/securityscan_homelist_cache
+[[ -f "$ad_miui_securitycenter" ]] && { chattr -i $ad_miui_securitycenter;rm -f $ad_miui_securitycenter;am force-stop 'com.miui.securitycenter'; }
+
 wait
 exit 0
+
+
+
