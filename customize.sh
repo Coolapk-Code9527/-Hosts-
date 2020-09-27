@@ -30,8 +30,8 @@ REPLACE="
 # 脚本内容
 ##########################################################################################
 starttime=`date +"%Y-%m-%d %H:%M:%S"`
-hosts=$MODPATH/system/etc/hosts
-ModulesPath=${0%/modules*}/modules
+hosts=${MODPATH}/system/etc/hosts
+ModulesPath=${MODPATH%/modules*}/modules
 count=`wc -l $hosts | awk '{print $1}'`
 usage=`du -h $hosts | awk '{print $1}'`
 usageAB=`du $hosts | awk '{print $1}'`
@@ -426,24 +426,24 @@ done
 fi
   ui_print "$echoprint"
 
-  ui_print "- 【禁用应用广告文件夹执行权限】"
+  ui_print "- 【禁用应用广告文件夹写入权限】"
 data_storage=/data/data
 media_storage=/data/media/0
-find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*adnet*" -o -iname "*splash*" ')' | grep -ivE 'rules|filter|block|white|mxtech'`
+find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*adnet*" -o -iname "*splash*" -o -iname "*advertise*" ')' | grep -ivE 'rules|filter|block|white|mxtech'`
 if [[ "$find_ad_files" != "" ]];then
-  ui_print "禁用文件夹关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|adnet|splash|相关文件夹执行权限"
+  ui_print "禁用文件夹关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|adnet|splash|advertise|相关文件夹写入权限"
   for FADL in $find_ad_files;do
     if [[ -d "$FADL" ]];then
       chattr -R -i $FADL
-      chmod -R 660 $FADL
+      chmod -R 440 $FADL
       rm -rf $FADL/*
   fi
 done
   echo > $MODPATH/Adfileslist.log
-  echo -e "禁用应用广告文件夹执行权限列表：\n${find_ad_files}\n" >> $MODPATH/Adfileslist.log
-  ui_print "禁用应用广告文件夹执行权限列表保存路径：$MODPATH/Adfileslist.log"
+  echo -e "禁用应用广告文件夹写入权限列表：\n${find_ad_files}\n" >> $MODPATH/Adfileslist.log
+  ui_print "禁用应用广告文件夹写入权限列表保存路径：$MODPATH/Adfileslist.log"
 else
-  ui_print "禁用文件夹关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|adnet|splash|相关文件夹执行权限"
+  ui_print "禁用文件夹关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|adnet|splash|advertise|相关文件夹写入权限"
   ui_print "参数为空,设置失败❗"
 fi
 
@@ -462,7 +462,7 @@ if [[ "$AD_FilesBlackList" != "" ]];then
   for ADFL in $AD_FilesBlackList;do
     if [[ -d "$ADFL" ]];then
       chattr -R -i $ADFL
-      chmod -R 660 $ADFL
+      chmod -R 440 $ADFL
       rm -rf $ADFL/*
     fi
   done
@@ -561,11 +561,11 @@ fi
 #       chcon 环境 目标
 #
 # set_perm_recursive <目录> <所有者> <组> <权限> <文件权限> [环境]
-#     如果未设置[context]，则默认值为"u:object_r:system_file:s0"
+#     如果未设置[环境]，则默认值为"u:object_r:system_file:s0"
 #     对于<目录>中的所有文件，它将调用：
-#       set_perm file 所有者 组 文件权限 环境
+#       set_perm 文件 所有者 组 文件权限 环境
 #     对于<目录>中的所有目录（包括自身），它将调用：
-#       set_perm dir 所有者 组 权限 环境
+#       set_perm 文件夹 所有者 组 权限 环境
 #
 ##########################################################################################
 

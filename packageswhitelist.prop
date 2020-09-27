@@ -1,4 +1,5 @@
 #DNS应用包名放行（对私人DNS无效）
+com.tencent.mm
 com.tencent.tmgp.sgame
 com.tencent.tmgp.pubgmhd
 com.tencent.tmgp.cf
