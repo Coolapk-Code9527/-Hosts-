@@ -1,4 +1,4 @@
-#要启用的应用广告文件执行权限路径
+#要启用的应用广告文件写入权限路径
 #UC浏览器
 /data/media/0/UCDownloads
 /data/media/0/Android/data/com.UCMobile/files/UCDownloads
@@ -7,4 +7,6 @@
 /data/media/0/Android/data/com.mxtech.videoplayer.ad
 #百度网盘
 /data/data/com.baidu.netdisk/files/ad_video_caches
+#懂车帝
+/data/media/0/Android/data/com.ss.android.auto/splashCache
 
