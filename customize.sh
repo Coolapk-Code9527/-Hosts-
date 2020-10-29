@@ -60,8 +60,8 @@ module_info=`unzip -v $ZIPFILE | grep -v '/' \
  -e 's/packagesblacklist.prop/& -———- 应用包名禁网配置文件/g'\
  -e 's/cblacklist.prop/& -———- 自定义禁用组件文件/g'\
  -e 's/cwhitelist.prop/& -———- 自定义启用组件文件/g'\
- -e 's/adfilesblacklist.prop/& -———- 自定义禁用执行权限文件/g'\
- -e 's/adfileswhitelist.prop/& -———- 自定义启用执行权限文件/g'`
+ -e 's/adfilesblacklist.prop/& -———- 自定义禁用写入权限文件/g'\
+ -e 's/adfileswhitelist.prop/& -———- 自定义启用写入权限文件/g'`
  
   set +eux
   [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 未检测到[busybox]模块,许多Linux命令将不能被执行,可能会发生错误‼️"
@@ -396,34 +396,87 @@ ad_miui_securitycenter=/data/data/com.miui.securitycenter/files/securityscan_hom
 #enable/disable/default-state
 AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|sync|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
-  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
+IFW=/data/system/ifw
+if [[ -e "$IFW" ]];then
+[ -f $TMPDIR/cblacklist.prop ] && cp -af $TMPDIR/cblacklist.prop $MODPATH/cblacklist.prop
+Add_ADActivity=`cat $MODPATH/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+  ui_print "[IFW方式]-禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
+  echo "<!-- 🧿结界禁用组件列表 -->" > $IFW/AD_Components_Blacklist.xml
+  echo "<rules>" >> $IFW/AD_Components_Blacklist.xml
+#Activity
+  echo "   <activity block=\"true\" log=\"false\">" >> $IFW/AD_Components_Blacklist.xml
+  for AD in $AD_Components;do
+    echo "      <component-filter name=\"${AD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+if [[ "$Add_ADActivity" != "" ]];then
+  for ADDAD in $Add_ADActivity;do
+    echo "      <component-filter name=\"${ADDAD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+  fi
+  echo "   </activity>" >> $IFW/AD_Components_Blacklist.xml
+#Broadcast
+  echo "   <broadcast block=\"true\" log=\"false\">" >> $IFW/AD_Components_Blacklist.xml
+  for AD in $AD_Components;do
+    echo "      <component-filter name=\"${AD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+if [[ "$Add_ADActivity" != "" ]];then
+  for ADDAD in $Add_ADActivity;do
+    echo "      <component-filter name=\"${ADDAD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+  fi
+  echo "   </broadcast>" >> $IFW/AD_Components_Blacklist.xml
+#Service
+  echo "   <service block=\"true\" log=\"false\">" >> $IFW/AD_Components_Blacklist.xml
+  for AD in $AD_Components;do
+    echo "      <component-filter name=\"${AD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+if [[ "$Add_ADActivity" != "" ]];then
+  for ADDAD in $Add_ADActivity;do
+    echo "      <component-filter name=\"${ADDAD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+  fi
+  echo "   </service>" >> $IFW/AD_Components_Blacklist.xml
+  echo "</rules>" >> $IFW/AD_Components_Blacklist.xml
+[ -f $TMPDIR/cwhitelist.prop ] && cp -af $TMPDIR/cwhitelist.prop $MODPATH/cwhitelist.prop
+AD_Whitelist=`cat $MODPATH/cwhitelist.prop | awk '!/#/ {print $NF}' | sed 's/\// \\\ \/ /g;s/ //g'`
+if [[ "$AD_Whitelist" != "" ]];then
+  for ADCW in $AD_Whitelist;do
+  sed -i '/'$ADCW'/d' $IFW/AD_Components_Blacklist.xml
+  done
+  fi
+  for AD in $AD_Components;do
+    pm enable $AD >/dev/null 2>&1
+  done
+  ui_print "禁用相关应用Components列表文件路径：$IFW/AD_Components_Blacklist.xml"
+elif [[ "$?" -ne 0 ]];then
+  ui_print "[PM方式]-禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
 done
-  echo > $MODPATH/Components.log
+  ui_print > $MODPATH/Components.log
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Components.log
   ui_print "禁用相关应用Components列表保存路径：$MODPATH/Components.log"
-else
-  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
-  ui_print "参数为空,设置失败❗"
-fi
-
 [ -f $TMPDIR/cwhitelist.prop ] && cp -af $TMPDIR/cwhitelist.prop $MODPATH/cwhitelist.prop
 AD_Whitelist=`cat $MODPATH/cwhitelist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$AD_Whitelist" != "" ]];then
   for ADCW in $AD_Whitelist;do
     pm enable $ADCW >/dev/null 2>&1
-done
-fi
-
+  done
+  fi
 [ -f $TMPDIR/cblacklist.prop ] && cp -af $TMPDIR/cblacklist.prop $MODPATH/cblacklist.prop
 Add_ADActivity=`cat $MODPATH/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$Add_ADActivity" != "" ]];then
   for ADDAD in $Add_ADActivity;do
     pm disable $ADDAD >/dev/null 2>&1
-done
+  done
   cat $MODPATH/cblacklist.prop >> $MODPATH/uninstall.sh
+  fi
 fi
+else
+  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
+  ui_print "参数为空,设置失败❗"
+fi
+
   ui_print "$echoprint"
 
   ui_print "- 【禁用应用广告文件夹写入权限】"

@@ -40,6 +40,11 @@ fi
 ad_miui_securitycenter=/data/data/com.miui.securitycenter/files/securityscan_homelist_cache
 [[ -f "$ad_miui_securitycenter" ]] && { chattr -i $ad_miui_securitycenter;rm -f $ad_miui_securitycenter;am force-stop 'com.miui.securitycenter'; }
 
+IFW=/data/system/ifw
+if [[ -f "$IFW/AD_Components_Blacklist.xml" ]];then
+rm -f $IFW/AD_Components_Blacklist.xml
+fi
+
 wait
 exit 0
 

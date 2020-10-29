@@ -56,25 +56,69 @@ fi
 
 AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|sync|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
+IFW=/data/system/ifw
+if [[ -e "$IFW" ]];then
+Add_ADActivity=`cat $MODDIR/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+  echo "<!-- 🧿结界禁用组件列表 -->" > $IFW/AD_Components_Blacklist.xml
+  echo "<rules>" >> $IFW/AD_Components_Blacklist.xml
+#Activity
+  echo "   <activity block=\"true\" log=\"false\">" >> $IFW/AD_Components_Blacklist.xml
+  for AD in $AD_Components;do
+    echo "      <component-filter name=\"${AD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+if [[ "$Add_ADActivity" != "" ]];then
+  for ADDAD in $Add_ADActivity;do
+    echo "      <component-filter name=\"${ADDAD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+  fi
+  echo "   </activity>" >> $IFW/AD_Components_Blacklist.xml
+#Broadcast
+  echo "   <broadcast block=\"true\" log=\"false\">" >> $IFW/AD_Components_Blacklist.xml
+  for AD in $AD_Components;do
+    echo "      <component-filter name=\"${AD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+if [[ "$Add_ADActivity" != "" ]];then
+  for ADDAD in $Add_ADActivity;do
+    echo "      <component-filter name=\"${ADDAD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+  fi
+  echo "   </broadcast>" >> $IFW/AD_Components_Blacklist.xml
+#Service
+  echo "   <service block=\"true\" log=\"false\">" >> $IFW/AD_Components_Blacklist.xml
+  for AD in $AD_Components;do
+    echo "      <component-filter name=\"${AD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+if [[ "$Add_ADActivity" != "" ]];then
+  for ADDAD in $Add_ADActivity;do
+    echo "      <component-filter name=\"${ADDAD}\"/>" >> $IFW/AD_Components_Blacklist.xml
+  done
+  fi
+  echo "   </service>" >> $IFW/AD_Components_Blacklist.xml
+  echo "</rules>" >> $IFW/AD_Components_Blacklist.xml
+AD_Whitelist=`cat $MODDIR/cwhitelist.prop | awk '!/#/ {print $NF}' | sed 's/\// \\\ \/ /g;s/ //g'`
+if [[ "$AD_Whitelist" != "" ]];then
+  for ADCW in $AD_Whitelist;do
+  sed -i '/'$ADCW'/d' $IFW/AD_Components_Blacklist.xml
+  done
+  fi
+elif [[ "$?" -ne 0 ]];then
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
 done
-  echo > $MODDIR/Components.log
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODDIR/Components.log
-fi
-
 AD_Whitelist=`cat $MODDIR/cwhitelist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$AD_Whitelist" != "" ]];then
   for ADCW in $AD_Whitelist;do
     pm enable $ADCW >/dev/null 2>&1
-done
-fi
-
+  done
+  fi
 Add_ADActivity=`cat $MODDIR/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$Add_ADActivity" != "" ]];then
   for ADDAD in $Add_ADActivity;do
     pm disable $ADDAD >/dev/null 2>&1
-done
+  done
+  cat $MODDIR/cblacklist.prop >> $MODDIR/uninstall.sh
+  fi
 fi
 
 data_storage=/data/data
