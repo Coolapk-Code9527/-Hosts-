@@ -1,4 +1,4 @@
-#要禁用的应用广告文件执行权限路径
+#要禁用的应用广告文件写入权限路径
 ##START
 #小米广告
 /data/media/0/miad
@@ -7,6 +7,7 @@
 /data/data/com.android.browser/files/data/banners
 #QQ音乐
 /data/media/0/Android/data/com.tencent.qqmusic/files/cache/splash
+/data/media/0/Android/data/com.tencent.qqmusic/files/cache/ad_source
 #网易云音乐
 /data/media/0/Android/data/com.netease.cloudmusic/cache/Ad
 #酷狗音乐
@@ -38,6 +39,7 @@
 #滴滴出行
 /data/media/0/didiscreenad
 #360浏览器
+/data/data/com.qihoo.browser/files/plugins_v3_data/adx
 /data/media/0/360/newssdk/com.qihoo.browser/cache_v1/splash_native
 /data/media/0/360/newssdk/com.qihoo.browser/cache_v1/splash_native_ad
 #应用汇

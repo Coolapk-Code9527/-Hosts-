@@ -9,3 +9,5 @@ com.alimama.moon/.ui.splashad.SplashAdActivity
 com.xtuone.android.syllabus/com.xtuone.android.friday.AdvertisementWallActivity
 com.tuanzi.savemoney/.main.StartAdvertiseActivity
 com.tuanzi.savemoney/com.tuanzi.savemoney.main.StartAdvertiseActivity
+com.qihoo.browser/.adsdk.activity.SplashDelegateActivity
+com.qihoo.browser/com.qihoo.browser.adsdk.activity.SplashDelegateActivity

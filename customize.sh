@@ -447,6 +447,7 @@ if [[ "$AD_Whitelist" != "" ]];then
   for AD in $AD_Components;do
     pm enable $AD >/dev/null 2>&1
   done
+  ui_print "注：此功能可能会致使部分应用发生奔溃，请知悉！"
   ui_print "禁用相关应用Components列表文件路径：$IFW/AD_Components_Blacklist.xml"
 elif [[ "$?" -ne 0 ]];then
   ui_print "[PM方式]-禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
@@ -455,6 +456,7 @@ elif [[ "$?" -ne 0 ]];then
 done
   ui_print > $MODPATH/Components.log
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Components.log
+  ui_print "注：此功能可能会致使部分应用发生奔溃，请知悉！"
   ui_print "禁用相关应用Components列表保存路径：$MODPATH/Components.log"
 [ -f $TMPDIR/cwhitelist.prop ] && cp -af $TMPDIR/cwhitelist.prop $MODPATH/cwhitelist.prop
 AD_Whitelist=`cat $MODPATH/cwhitelist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
@@ -470,6 +472,9 @@ if [[ "$Add_ADActivity" != "" ]];then
     pm disable $ADDAD >/dev/null 2>&1
   done
   cat $MODPATH/cblacklist.prop >> $MODPATH/uninstall.sh
+  fi
+if [[ -f "$IFW/AD_Components_Blacklist.xml" ]];then
+  rm -f $IFW/AD_Components_Blacklist.xml
   fi
 fi
 else
