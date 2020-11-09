@@ -5,6 +5,7 @@
 # 这将确保您的模块仍能正常工作
 MODDIR=${0%/*}
 
+
 # 该脚本将在late_start服务模式下执行
 sleep 30
 description=$MODDIR/module.prop
@@ -54,10 +55,12 @@ if [[ "$reject_packages" != "" ]];then
   done
 fi
 
+#enable/disable/default-state
 AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|sync|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
 IFW=/data/system/ifw
-if [[ -e "$IFW" ]];then
+ComponentMode=`cat $MODDIR/settings.prop | grep "应用组件禁用模式=" | cut -d "=" -f 2`
+if [[ -d "$IFW" && "$ComponentMode" == "IFW" ]];then
 Add_ADActivity=`cat $MODDIR/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
   echo "<!-- 🧿结界禁用组件列表 -->" > $IFW/AD_Components_Blacklist.xml
   echo "<rules>" >> $IFW/AD_Components_Blacklist.xml
@@ -101,10 +104,14 @@ if [[ "$AD_Whitelist" != "" ]];then
   sed -i '/'$ADCW'/d' $IFW/AD_Components_Blacklist.xml
   done
   fi
-elif [[ "$?" -ne 0 ]];then
+  for AD in $AD_Components;do
+    pm enable $AD >/dev/null 2>&1
+  done
+elif [[ "$?" -ne 0 && "$ComponentMode" == "PM" ]];then
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
 done
+  echo > $MODDIR/Components.log
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODDIR/Components.log
 AD_Whitelist=`cat $MODDIR/cwhitelist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$AD_Whitelist" != "" ]];then
@@ -119,6 +126,10 @@ if [[ "$Add_ADActivity" != "" ]];then
   done
   cat $MODDIR/cblacklist.prop >> $MODDIR/uninstall.sh
   fi
+if [[ -f "$IFW/AD_Components_Blacklist.xml" ]];then
+  rm -f $IFW/AD_Components_Blacklist.xml
+  fi
+ fi
 fi
 
 data_storage=/data/data

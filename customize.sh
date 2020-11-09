@@ -49,6 +49,7 @@ module_info=`unzip -v $ZIPFILE | grep -v '/' \
  -e 's/README.md/& -———- 模块说明文件/g'\
  -e 's/service.sh/& -———- 开机后自启脚本/g'\
  -e 's/post-fs-data.sh/& -———- 开机前自启脚本/g'\
+ -e 's/settings.prop/& -———- 模块偏好设置文件/g'\
  -e 's/uninstall.sh/& -———- 自定义卸载脚本/g'\
  -e 's/sepolicy.rule/& -———- 自定义sepolicy规则/g'\
  -e 's/ipv4dns.prop/& -———- IPV4_DNS配置文件/g'\
@@ -397,7 +398,9 @@ ad_miui_securitycenter=/data/data/com.miui.securitycenter/files/securityscan_hom
 AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|sync|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
 IFW=/data/system/ifw
-if [[ -e "$IFW" ]];then
+[ -f $TMPDIR/settings.prop ] && cp -af $TMPDIR/settings.prop $MODPATH/settings.prop
+ComponentMode=`cat $MODPATH/settings.prop | grep "应用组件禁用模式=" | cut -d "=" -f 2`
+if [[ -d "$IFW" && "$ComponentMode" == "IFW" ]];then
 [ -f $TMPDIR/cblacklist.prop ] && cp -af $TMPDIR/cblacklist.prop $MODPATH/cblacklist.prop
 Add_ADActivity=`cat $MODPATH/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
   ui_print "[IFW方式]-禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
@@ -449,12 +452,12 @@ if [[ "$AD_Whitelist" != "" ]];then
   done
   ui_print "注：此功能可能会致使部分应用发生奔溃，请知悉！"
   ui_print "禁用相关应用Components列表文件路径：$IFW/AD_Components_Blacklist.xml"
-elif [[ "$?" -ne 0 ]];then
+elif [[ "$?" -ne 0 && "$ComponentMode" == "PM" ]];then
   ui_print "[PM方式]-禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
 done
-  ui_print > $MODPATH/Components.log
+  echo > $MODPATH/Components.log
   echo -e "应用禁用组件列表：\n${AD_Components}\n" >> $MODPATH/Components.log
   ui_print "注：此功能可能会致使部分应用发生奔溃，请知悉！"
   ui_print "禁用相关应用Components列表保存路径：$MODPATH/Components.log"
