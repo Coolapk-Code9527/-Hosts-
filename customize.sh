@@ -389,8 +389,13 @@ fi
 [[ `settings get global personalized_ad_enabled` != "" ]] && settings put global personalized_ad_enabled '0'
 [[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
-ad_miui_securitycenter=/data/data/com.miui.securitycenter/files/securityscan_homelist_cache
-[[ -f "$ad_miui_securitycenter" ]] && { echo > $ad_miui_securitycenter;chattr -i $ad_miui_securitycenter;chmod 440 $ad_miui_securitycenter;am force-stop 'com.miui.securitycenter'; }
+ad_miui_securitycenter=/data/data/com.miui.securitycenter/files
+if [[ -e "$ad_miui_securitycenter" ]];then
+[[ -f "$ad_miui_securitycenter/securityscan_homelist_cache" ]] && { echo > $ad_miui_securitycenter/securityscan_homelist_cache; chattr -i $ad_miui_securitycenter/securityscan_homelist_cache; chmod 440 $ad_miui_securitycenter/securityscan_homelist_cache; }
+[[ -f "$ad_miui_securitycenter/gamebooster/gb_active_track" ]] && { echo > $ad_miui_securitycenter/gamebooster/gb_active_track; chattr -i $ad_miui_securitycenter/gamebooster/gb_active_track; chmod 440 $ad_miui_securitycenter/gamebooster/gb_active_track; }
+[[ -f "$ad_miui_securitycenter/gamebooster/gbxunyoubusiness" ]] && { echo > $ad_miui_securitycenter/gamebooster/gbxunyoubusiness; chattr -i $ad_miui_securitycenter/gamebooster/gbxunyoubusiness; chmod 440 $ad_miui_securitycenter/gamebooster/gbxunyoubusiness; }
+am force-stop 'com.miui.securitycenter'
+fi
 
   ui_print "- 【禁用应用Components】"
 

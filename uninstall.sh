@@ -37,8 +37,13 @@ if [[ "$AD_FilesBlackList" != "" ]];then
 done
 fi
 
-ad_miui_securitycenter=/data/data/com.miui.securitycenter/files/securityscan_homelist_cache
-[[ -f "$ad_miui_securitycenter" ]] && { chattr -i $ad_miui_securitycenter;rm -f $ad_miui_securitycenter;am force-stop 'com.miui.securitycenter'; }
+ad_miui_securitycenter=/data/data/com.miui.securitycenter/files
+if [[ -e "$ad_miui_securitycenter" ]];then
+[[ -f "$ad_miui_securitycenter/securityscan_homelist_cache" ]] && { chattr -i $ad_miui_securitycenter/securityscan_homelist_cache; rm -f $ad_miui_securitycenter/securityscan_homelist_cache; }
+[[ -f "$ad_miui_securitycenter/gamebooster/gb_active_track" ]] && { chattr -i $ad_miui_securitycenter/gamebooster/gb_active_track; rm -f $ad_miui_securitycenter/gamebooster/gb_active_track; }
+[[ -f "$ad_miui_securitycenter/gamebooster/gbxunyoubusiness" ]] && { chattr -i $ad_miui_securitycenter/gamebooster/gbxunyoubusiness; rm -f $ad_miui_securitycenter/gamebooster/gbxunyoubusiness; }
+am force-stop 'com.miui.securitycenter'
+fi
 
 IFW=/data/system/ifw
 if [[ -f "$IFW/AD_Components_Blacklist.xml" ]];then
