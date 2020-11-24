@@ -1,5 +1,5 @@
 #要禁用的应用组件
-#start
+#Disable_Components_Start
 tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService
 tv.danmaku.bili/com.bilibili.adcommon.apkdownload.ADDownloadService
 tv.danmaku.bili/com.bilibili.adcommon.apkdownload.panel.ADPanelService
@@ -7,11 +7,13 @@ com.linroid.zlive/mobi.oneway.export.AdShowActivity
 com.duowan.kiwi/com.duowan.kiwi.adsplash.view.AdSplashActivity
 com.duokan.reader/.domain.ad.AppDownloadReceiver
 com.miui.cloudservice/.ad.AdImageDownloadJobService
+com.xiaomi.smarthome/.ad.view.PopAdActivity
+com.xiaomi.smarthome/.ad.view.BottomPopAdActivity
 com.android.calendar/com.miui.calendar.ad.DownloadInstallReceiver
 com.iflytek.inputmethod.miui/com.appicplay.sdk.ad.service.DownloadService
 com.xunlei.downloadprovider/com.qq.e.ads.ADActivity
 
-#end
+#Disable_Components_End
 
 
 

@@ -1,5 +1,5 @@
 #要禁用的应用广告文件写入权限路径
-##START
+#Disable_Folder_Start
 #小米广告
 /data/media/0/miad
 #MIUI浏览器
@@ -50,7 +50,7 @@
 /data/media/0/Android/data/com.duokan.free/cache/splash_ad_cache
 /data/media/0/Android/data/com.duokan.free/cache/splash_video_cache*
 
-##END
+#Disable_Folder_End
 
 
 

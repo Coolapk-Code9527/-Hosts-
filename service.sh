@@ -37,6 +37,10 @@ fi
 [[ `settings get global personalized_ad_time` != "" ]] && settings put global personalized_ad_time '0'
 [[ `settings get global passport_ad_status` != "" ]] && settings put global passport_ad_status 'OFF'
 
+read_settings() {
+[[ -f "$MODDIR/settings.prop" ]] && cat $MODDIR/settings.prop | awk '!/#/ {print $0}' | sed -n "s/^${1}=//p"
+}
+
 IP_Black=`cat $MODDIR/ipblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
 if [[ "$IP_Black" != "" ]];then
   for IP in $IP_Black;do
@@ -55,11 +59,14 @@ if [[ "$reject_packages" != "" ]];then
   done
 fi
 
+Disable_Components() {
+ComponentMode=`read_settings 禁用应用组件模式`
+Component_Keyword_Blacklist_B=`read_settings 应用组件关键字黑名单 | sed 's/\"//g;s/\./\\\./g'`
+Component_Keyword_Whitelist_C=`read_settings 应用组件关键字白名单 | sed 's/\"//g;s/\./\\\./g'`
 #enable/disable/default-state
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|sync|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE "${Component_Keyword_Blacklist_B}" | grep -viE "${Component_Keyword_Whitelist_C}" | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
 IFW=/data/system/ifw
-ComponentMode=`cat $MODDIR/settings.prop | grep "应用组件禁用模式=" | cut -d "=" -f 2`
 if [[ -d "$IFW" && "$ComponentMode" == "IFW" ]];then
 Add_ADActivity=`cat $MODDIR/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
   echo "<!-- 🧿结界禁用组件列表 -->" > $IFW/AD_Components_Blacklist.xml
@@ -131,7 +138,14 @@ if [[ -f "$IFW/AD_Components_Blacklist.xml" ]];then
   fi
  fi
 fi
+}
+components_status=`read_settings 禁用应用组件`
+if [[ "$components_status" == "开" ]];then
+  Disable_Components
+fi
 
+
+Disable_Folder() {
 data_storage=/data/data
 media_storage=/data/media/0
 find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*adnet*" -o -iname "*splash*" -o -iname "*advertise*" ')' | grep -ivE 'rules|filter|block|white|mxtech'`
@@ -165,6 +179,13 @@ if [[ "$AD_FilesBlackList" != "" ]];then
   fi
 done
 fi
+}
+
+folder_status=`read_settings 禁用文件夹写入权限`
+if [[ "$folder_status" == "开" ]];then
+  Disable_Folder
+fi
+
 reset
 
 DNS_Settings() {
@@ -357,14 +378,22 @@ echo > $MODDIR/ipv4dnsovertls.log
 echo > $MODDIR/ipv6dnsovertls.log
 }
 
+dns_settings_status=`read_settings 自动设置DNS`
+if [[ "$dns_settings_status" == "开" ]];then
+  while true; do
+  dns_settings_time=`read_settings DNS刷新时间`
+  WakeState=`dumpsys power | grep 'mWakefulness=' | cut -d '=' -f 2`
+  DisplayState=`dumpsys power | grep 'Display Power: state=' | sed 's/.*=//g'`
+  [[ "$WakeState" == "Awake" || "$DisplayState" == "ON" ]] && DNS_Settings
+  sleep $dns_settings_time
+  clear
+  done
+elif [[ "$dns_settings_status" == "关" ]];then
+  sed -i "s/- .*/- /g" $description
+  break
+  continue
+  reset
+fi
 
-# 不需要自动更换DNS的删除本行以下全部内容❗
-while true; do
-WakeState=`dumpsys power | grep 'mWakefulness=' | cut -d '=' -f 2`
-DisplayState=`dumpsys power | grep 'Display Power: state=' | sed 's/.*=//g'`
-[[ "$WakeState" == "Awake" || "$DisplayState" == "ON" ]] && DNS_Settings
-sleep 10m #刷新时间：s为秒，m为分钟，h为小时，d为天数，不指定单位默认为秒。
-clear
-done
 
 

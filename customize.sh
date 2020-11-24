@@ -29,6 +29,7 @@ REPLACE="
 ##########################################################################################
 # 脚本内容
 ##########################################################################################
+description=$MODPATH/module.prop
 starttime=`date +"%Y-%m-%d %H:%M:%S"`
 hosts=${MODPATH}/system/etc/hosts
 ModulesPath=${MODPATH%/modules*}/modules
@@ -65,16 +66,21 @@ module_info=`unzip -v $ZIPFILE | grep -v '/' \
  -e 's/adfileswhitelist.prop/& -———- 自定义启用写入权限文件/g'`
  
   set +eux
+  [ -f $TMPDIR/settings.prop ] && cp -af $TMPDIR/settings.prop $MODPATH/settings.prop
+  read_settings() {
+  [[ -f "$MODPATH/settings.prop" ]] && cat $MODPATH/settings.prop | awk '!/#/ {print $0}' | sed -n "s/^${1}=//p"
+  }
   [[ ! -f /system/xbin/busybox && ! -f /system/bin/busybox ]] && ui_print "- 未检测到[busybox]模块,许多Linux命令将不能被执行,可能会发生错误‼️"
   [[ -e "$hostsTesting" ]] && ui_print "- 检测到已安装有其他hosts模块,请将其停用或卸载,不然可能会有冲突导致此模块hosts无法生效‼️"
   [[ -d $ModulesPath/dnss && ! -f $ModulesPath/dnss/disable ]] && {
   touch $ModulesPath/dnss/disable
   chmod 644 $ModulesPath/dnss/disable
   ui_print "- 本模块已支持DNS更改,无需再使用其他DNS模块,已自动将其停用(重启生效)❗"
-}
+  }
   echoprint='━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
   ui_print "$echoprint"
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
+  ui_print "- 如安装过程Magisk闪退,尝试重新刷入模块!"
   ui_print "$echoprint"
   
   ui_print "- 【hosts文件】"
@@ -92,7 +98,7 @@ elif [[ "$?" -ne 0 ]];then
   ui_print "$echoprint"
 fi
 
-  ui_print "- 【清除应用Cache】"
+Clear_Cache() {
 clearA=/data/data/*/cache
 clearB=/data/media/0/Android/data/*/cache
 clearU=/data/user_de/0/*/cache
@@ -106,10 +112,20 @@ fi
 disk_cacheB=`du -csk ${clearA} ${clearB} ${clearU} | awk 'END{print $1/1024}' | sed 's/[a-zA-Z]//g'`
 disk_cacheC=`echo | awk "{print $disk_cacheA-$disk_cacheB}" | awk '{printf("%.f\n",$1)}'`
   ui_print "清除：${disk_cacheC} M"
-  ui_print "$echoprint"
+}
 
-  ui_print "- 【根据当前网络环境选择DNS】"
-  
+clear_cache_status=`read_settings 清除应用缓存`
+if [[ "$clear_cache_status" == "开" ]];then
+  ui_print "- 【清除应用Cache】"
+  Clear_Cache
+  ui_print "$echoprint"
+elif [[ "$clear_cache_status" == "关" ]];then
+  ui_print "- 【清除应用Cache】"
+  ui_print "此功能已关闭"
+  ui_print "$echoprint"
+fi
+
+DNS_Settings() {
 [ -f $TMPDIR/ipv4dns.prop ] && cp -af $TMPDIR/ipv4dns.prop $MODPATH/ipv4dns.prop
 [ -f $TMPDIR/ipv6dns.prop ] && cp -af $TMPDIR/ipv6dns.prop $MODPATH/ipv6dns.prop
 [ -f $TMPDIR/ipv4dnsovertls.prop ] && cp -af $TMPDIR/ipv4dnsovertls.prop $MODPATH/ipv4dnsovertls.prop
@@ -262,6 +278,9 @@ else
     [[ "$UDP_REDIRECT6" != "" ]] && for UDP6 in ${UDP_REDIRECT6};do ip6tables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination ${UDP6}:53; done
 fi
 
+dns_settings_time=`read_settings DNS刷新时间 | sed 's/s/秒/g;s/[0-9]$/&秒/g;s/m/分钟/g;s/h/小时/g;s/d/天/g' `
+    ui_print "DNS刷新时间：每${dns_settings_time}更新一次"
+
 dotavg=`cat $MODPATH/ipv4dnsovertls.log | grep 'min/avg/max' | cut -d "=" -f 2 | sort -t '/' -k 2n | awk 'NR==1{print $1}' `
 dotavgtest=`echo $dotavg | awk -F"/" '{printf("%.f\n",$2)}' `
 dotdnsavg=`cat $MODPATH/ipv4dnsovertls.log | grep -B 2 "$dotavg" | awk 'NR==1{print $2}' `
@@ -317,7 +336,6 @@ elif [[ "$dotdnsavg" != "" && "$dotavgtest" -lt 150 ]];then
     DOT_Status
 fi
 
-description=$MODPATH/module.prop
 dotmode=`settings get global private_dns_mode`
 dotspecifier=`settings get global private_dns_specifier`
 iptdnsTesting=`iptables -t nat -nL OUTPUT --line-numbers | grep 'dpt:53 ' | awk 'END{print $(NF)}' | cut -d ':' -f 2- | cut -d ':' -f 1`
@@ -358,6 +376,20 @@ echo > $MODPATH/ipv4dns.log
 echo > $MODPATH/ipv6dns.log
 echo > $MODPATH/ipv4dnsovertls.log
 echo > $MODPATH/ipv6dnsovertls.log
+}
+
+dns_settings_status=`read_settings 自动设置DNS`
+if [[ "$dns_settings_status" == "开" ]];then
+  ui_print "- 【自动设置DNS】"
+  DNS_Settings
+  ui_print "$echoprint"
+elif [[ "$dns_settings_status" == "关" ]];then
+  ui_print "- 【自动设置DNS】"
+  sed -i "s/- .*/- /g" $description
+  ui_print "此功能已关闭"
+  ui_print "$echoprint"
+fi
+
 
 [ -f $TMPDIR/ipblacklist.prop ] && cp -af $TMPDIR/ipblacklist.prop $MODPATH/ipblacklist.prop
 IP_Black=`cat $MODPATH/ipblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
@@ -378,7 +410,6 @@ if [[ "$reject_packages" != "" ]];then
   done
 fi
 
-  ui_print "$echoprint"
 #  ProjectAddress=`grep 'https://' $hosts | awk '{print $2}'`
 #  [[ "$ProjectAddress" != "" ]] && {
 #   ui_print "- 【项目地址-GitHub/Gitee】" 
@@ -392,23 +423,26 @@ fi
 ad_miui_securitycenter=/data/data/com.miui.securitycenter/files
 if [[ -e "$ad_miui_securitycenter" ]];then
 [[ -f "$ad_miui_securitycenter/securityscan_homelist_cache" ]] && { echo > $ad_miui_securitycenter/securityscan_homelist_cache; chattr -i $ad_miui_securitycenter/securityscan_homelist_cache; chmod 440 $ad_miui_securitycenter/securityscan_homelist_cache; }
-[[ -f "$ad_miui_securitycenter/gamebooster/gb_active_track" ]] && { echo > $ad_miui_securitycenter/gamebooster/gb_active_track; chattr -i $ad_miui_securitycenter/gamebooster/gb_active_track; chmod 440 $ad_miui_securitycenter/gamebooster/gb_active_track; }
-[[ -f "$ad_miui_securitycenter/gamebooster/gbxunyoubusiness" ]] && { echo > $ad_miui_securitycenter/gamebooster/gbxunyoubusiness; chattr -i $ad_miui_securitycenter/gamebooster/gbxunyoubusiness; chmod 440 $ad_miui_securitycenter/gamebooster/gbxunyoubusiness; }
 am force-stop 'com.miui.securitycenter'
 fi
 
-  ui_print "- 【禁用应用Components】"
-
+Disable_Components() {
+ComponentMode=`read_settings 禁用应用组件模式`
+Component_Keyword_Blacklist_A=`read_settings 应用组件关键字黑名单 | sed 's/\"//g'`
+Component_Keyword_Blacklist_B=`read_settings 应用组件关键字黑名单 | sed 's/\"//g;s/\./\\\./g'`
+Component_Keyword_Whitelist_C=`read_settings 应用组件关键字白名单 | sed 's/\"//g;s/\./\\\./g'`
+Component_Keyword_Blacklist_D=`read_settings 应用组件关键字黑名单 | sed 's/\"//g;s/\./\\\ \\\ \./g;s/ //g'`
+Component_Keyword_Whitelist_E=`read_settings 应用组件关键字白名单 | sed 's/\"//g;s/\./\\\ \\\ \./g;s/ //g'`
+[[ "$Component_Keyword_Blacklist_D" != "" ]] && sed -i 's/\$Component_Keyword_Blacklist_D/'$Component_Keyword_Blacklist_D'/g' $MODPATH/uninstall.sh
+[[ "$Component_Keyword_Whitelist_E" != "" ]] && sed -i 's/\$Component_Keyword_Whitelist_E/'$Component_Keyword_Whitelist_E'/g' $MODPATH/uninstall.sh
 #enable/disable/default-state
-AD_Components=`dumpsys package --all-components | grep '/' | grep -iE '\.ad\.|ads\.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash' | grep -viE ':|=|add|sync|load|read|setting' | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
+AD_Components=`dumpsys package --all-components | grep '/' | grep -iE "${Component_Keyword_Blacklist_B}" | grep -viE "${Component_Keyword_Whitelist_C}" | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
 if [[ "$AD_Components" != "" ]];then
 IFW=/data/system/ifw
-[ -f $TMPDIR/settings.prop ] && cp -af $TMPDIR/settings.prop $MODPATH/settings.prop
-ComponentMode=`cat $MODPATH/settings.prop | grep "应用组件禁用模式=" | cut -d "=" -f 2`
 if [[ -d "$IFW" && "$ComponentMode" == "IFW" ]];then
 [ -f $TMPDIR/cblacklist.prop ] && cp -af $TMPDIR/cblacklist.prop $MODPATH/cblacklist.prop
 Add_ADActivity=`cat $MODPATH/cblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
-  ui_print "[IFW方式]-禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
+  ui_print "[IFW方式]-禁用应用关键字包含有|${Component_Keyword_Blacklist_A}|相关组件"
   echo "<!-- 🧿结界禁用组件列表 -->" > $IFW/AD_Components_Blacklist.xml
   echo "<rules>" >> $IFW/AD_Components_Blacklist.xml
 #Activity
@@ -458,7 +492,7 @@ if [[ "$AD_Whitelist" != "" ]];then
   ui_print "注：此功能可能会致使部分应用发生奔溃，请知悉！"
   ui_print "禁用相关应用Components列表文件路径：$IFW/AD_Components_Blacklist.xml"
 elif [[ "$?" -ne 0 && "$ComponentMode" == "PM" ]];then
-  ui_print "[PM方式]-禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
+  ui_print "[PM方式]-禁用应用关键字包含有|${Component_Keyword_Blacklist_A}|相关组件"
   for AD in $AD_Components;do
     pm disable $AD >/dev/null 2>&1
 done
@@ -486,18 +520,46 @@ if [[ -f "$IFW/AD_Components_Blacklist.xml" ]];then
   fi
 fi
 else
-  ui_print "禁用应用关键字包含有|.ad.|ads.|adsdk|adview|AdWeb|Advert|AdActivity|AdService|splashad|adsplash|相关组件"
+  ui_print "禁用应用关键字包含有|${Component_Keyword_Blacklist_A}|相关组件"
   ui_print "参数为空,设置失败❗"
 fi
+}
 
+components_status=`read_settings 禁用应用组件`
+if [[ "$components_status" == "开" ]];then
+  ui_print "- 【禁用应用Components】"
+  Disable_Components
   ui_print "$echoprint"
+elif [[ "$components_status" == "关" ]];then
+  ui_print "- 【禁用应用Components】"
+Component_Keyword_Blacklist_A=`read_settings 应用组件关键字黑名单 | sed 's/\"//g'`
+Component_Keyword_Blacklist_B=`read_settings 应用组件关键字黑名单 | sed 's/\"//g;s/\./\\\./g'`
+Component_Keyword_Whitelist_C=`read_settings 应用组件关键字白名单 | sed 's/\"//g;s/\./\\\./g'`
+Component_Keyword_Blacklist_D=`read_settings 应用组件关键字黑名单 | sed 's/\"//g;s/\./\\\ \\\ \./g;s/ //g'`
+Component_Keyword_Whitelist_E=`read_settings 应用组件关键字白名单 | sed 's/\"//g;s/\./\\\ \\\ \./g;s/ //g'`
+[[ "$Component_Keyword_Blacklist_D" != "" ]] && sed -i 's/\$Component_Keyword_Blacklist_D/'$Component_Keyword_Blacklist_D'/g' $MODPATH/uninstall.sh
+[[ "$Component_Keyword_Whitelist_E" != "" ]] && sed -i 's/\$Component_Keyword_Whitelist_E/'$Component_Keyword_Whitelist_E'/g' $MODPATH/uninstall.sh
+  AD_Components=`dumpsys package --all-components | grep '/' | grep -iE "${Component_Keyword_Blacklist_B}" | grep -viE "${Component_Keyword_Whitelist_C}" | sed 's/.* //g;s/}//g;s/^\/.*//g' | sort -u`
+  if [[ "$AD_Components" != "" ]];then
+  for AD in $AD_Components;do
+  pm enable $AD >/dev/null 2>&1
+  done
+  fi
+  IFW=/data/system/ifw
+  if [[ -f "$IFW/AD_Components_Blacklist.xml" ]];then
+  rm -f $IFW/AD_Components_Blacklist.xml
+  fi
+  ui_print "此功能已关闭"
+  ui_print "$echoprint"
+fi
 
-  ui_print "- 【禁用应用广告文件夹写入权限】"
+Disable_Folder() {
 data_storage=/data/data
 media_storage=/data/media/0
 find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*adnet*" -o -iname "*splash*" -o -iname "*advertise*" ')' | grep -ivE 'rules|filter|block|white|mxtech'`
+Ad_Folder=`cat $MODPATH/customize.sh | grep 'find_ad_files=' | sed -n '1p' | sed "s/.*(//g;s/).*//g;s/-iname//g;s/-o/\|/g;s/\'//g;s/\"//g;s/ //g"`
 if [[ "$find_ad_files" != "" ]];then
-  ui_print "禁用文件夹关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|adnet|splash|advertise|相关文件夹写入权限"
+  ui_print "禁用文件夹包含有|${Ad_Folder}|写入权限"
   for FADL in $find_ad_files;do
     if [[ -d "$FADL" ]];then
       chattr -R -i $FADL
@@ -509,7 +571,7 @@ done
   echo -e "禁用应用广告文件夹写入权限列表：\n${find_ad_files}\n" >> $MODPATH/Adfileslist.log
   ui_print "禁用应用广告文件夹写入权限列表保存路径：$MODPATH/Adfileslist.log"
 else
-  ui_print "禁用文件夹关键字包含有|.ad.|ad-|_ad_|.ads.|_ads_|adnet|splash|advertise|相关文件夹写入权限"
+  ui_print "禁用文件夹包含有|${Ad_Folder}|写入权限"
   ui_print "参数为空,设置失败❗"
 fi
 
@@ -534,8 +596,41 @@ if [[ "$AD_FilesBlackList" != "" ]];then
   done
   cat $MODPATH/adfilesblacklist.prop >> $MODPATH/uninstall.sh
 fi
+}
+
+folder_status=`read_settings 禁用文件夹写入权限`
+if [[ "$folder_status" == "开" ]];then
+  ui_print "- 【禁用应用广告文件夹写入权限】"
+  Disable_Folder
   ui_print "$echoprint"
-  
+elif [[ "$folder_status" == "关" ]];then
+  ui_print "- 【禁用应用广告文件夹写入权限】"
+  data_storage=/data/data
+  media_storage=/data/media/0
+  find_ad_files=`find ${data_storage} ${media_storage} -type d -mindepth 1 -maxdepth 8 '(' -iname "ad" -o -iname "*.ad" -o -iname "ad.*" -o -iname "*.ad.*" -o -iname "*_ad" -o -iname "ad_*" -o -iname "*_ad_*" -o -iname "ad-*" -o -iname "ads" -o -iname "*.ads" -o -iname "ads.*" -o -iname "*.ads.*" -o -iname "*_ads" -o -iname "ads_*" -o -iname "*_ads_*" -o -iname "*adnet*" -o -iname "*splash*" -o -iname "*advertise*" ')' | grep -ivE 'rules|filter|block|white|mxtech'`
+  if [[ "$find_ad_files" != "" ]];then
+  for FADL in $find_ad_files;do
+    if [[ -d "$FADL" ]];then
+      chattr -R -i $FADL
+      chmod -R 775 $FADL
+    fi
+  done
+  fi
+  [ -f $TMPDIR/adfilesblacklist.prop ] && cp -af $TMPDIR/adfilesblacklist.prop $MODPATH/adfilesblacklist.prop
+  AD_FilesBlackList=`cat $MODPATH/adfilesblacklist.prop | awk '!/#/ {print $NF}' | sed 's/ //g'`
+  if [[ "$AD_FilesBlackList" != "" ]];then
+  for ADFL in $AD_FilesBlackList;do
+    if [[ -d "$ADFL" ]];then
+      chattr -R -i $ADFL
+      chmod -R 775 $ADFL
+    fi
+  done
+  cat $MODPATH/adfilesblacklist.prop >> $MODPATH/uninstall.sh
+  fi
+  ui_print "此功能已关闭"
+  ui_print "$echoprint"
+fi
+
   [[ "$module_info" != "" ]] && ui_print "- 【模块文件信息参照表】" && ui_print "$module_info" && ui_print "$echoprint"
   
 endtime=`date +"%Y-%m-%d %H:%M:%S"`
@@ -546,9 +641,7 @@ firstday=`date +"%j"`
 firstweek=`date +"%U"`
 currenttime=`date +"%Y年%m月%d日 %H:%M:%S"`
 author=`cat $MODPATH/module.prop | grep 'author' | cut -d "=" -f 2`
-#sleeptime=`cat $MODPATH/service.sh | grep 'sleep' | awk 'END{print $2}' | sed 's/s/秒/g;s/[0-9]$/&秒/g;s/m/分钟/g;s/h/小时/g;s/d/天/g' `
 week=`date +"%w" | sed 's/0/星期日/g;s/1/星期一/g;s/2/星期二/g;s/3/星期三/g;s/4/星期四/g;s/5/星期五/g;s/6/星期六/g' `
-#  ui_print "- 循环延时：$sleeptime"
 if `date --help >/dev/null 2>&1` ;then
   [[ $(($interval_time%3600/60)) -ge "1" ]] && ui_print "- 安装耗时：$(($interval_time%3600/60))分$(($interval_time%3600%60))秒" || ui_print "- 安装耗时：$interval_time秒"
   ui_print "- 系统时间：$currenttime $week 今年第$firstweek周/$firstday天"
