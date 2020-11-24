@@ -4,4 +4,4 @@
 ***
 * [捐赠](https://gitee.com/coolapk-code_9527/border/raw/master/image/ALIPAY.jpg)
 ***
-![Image text](https://gitee.com/coolapk-code_9527/border/raw/master/image/ALIPAY.jpg)
+![ALIPAY](https://gitee.com/coolapk-code_9527/border/raw/master/image/ALIPAY.jpg)
