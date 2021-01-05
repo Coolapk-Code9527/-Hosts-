@@ -82,7 +82,7 @@ module_info=`unzip -v $ZIPFILE | grep -v '/' \
   ui_print "- 安装过程可能需较长的时间,请耐心等待……"
   ui_print "- 如安装过程Magisk闪退,尝试重新刷入模块!"
   ui_print "$echoprint"
-  
+  sleep 5
   ui_print "- 【hosts文件】"
   ui_print "大小：$usage  行数：$count 行  修改日期：$modifytime"
   ui_print "$echoprint"

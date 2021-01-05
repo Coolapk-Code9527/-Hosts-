@@ -2,6 +2,7 @@
 #Disable_Folder_Start
 #小米广告
 /data/media/0/miad
+/data/media/0/Android/data/com.miui.systemsAdsolution/files/miad
 #MIUI浏览器
 /data/data/com.android.browser/files/data/kw*
 /data/data/com.android.browser/files/data/banners
